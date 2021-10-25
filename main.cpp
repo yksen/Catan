@@ -2,7 +2,9 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <random>
+#ifdef __unix__
 #include <X11/Xlib.h>
+#endif
 
 void rendering_thread(sf::RenderWindow* window)
 {
@@ -18,7 +20,9 @@ void rendering_thread(sf::RenderWindow* window)
 
 int main()
 {
+    #ifdef __unix__
     XInitThreads();
+    #endif
 
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
