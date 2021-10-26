@@ -1,20 +1,25 @@
 #ifndef Catan_H
 #define Catan_H
+#include "Map.hpp"
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
+enum Stage { menu, settings, game };
+
 class Catan {
     private:
-        enum Stage { menu, settings, game };
-
         sf::RenderWindow* window;
         Stage stage;
+        Map map;  
 
     public:        
         Catan(sf::RenderWindow* x) {
             window = x;
             stage = menu;
         }
+        
+        Stage getStage() { return stage; }
+        void setMap(std::string mapName) { map.setMap(mapName); }
 
         void drawGame()
         {
@@ -23,10 +28,6 @@ class Catan {
             window->display();
         }  
     
-        Stage getStage()
-        {
-            return stage;
-        }
 };
 
 #endif

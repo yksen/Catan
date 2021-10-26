@@ -1,7 +1,4 @@
-#ifdef __unix__
-#include <X11/Xlib.h>
-#endif
-#include "Catan.h"
+#include "Catan.hpp"
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -9,16 +6,13 @@
 
 int main()
 {
-    #ifdef __unix__
-    XInitThreads();
-    #endif
-
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Catan", sf::Style::Fullscreen, settings);
 
     Catan game(&window);
-
+    game.setMap("Standard");
+    
     while (window.isOpen())
     {
         sf::Event event;
