@@ -5,12 +5,15 @@
 #include <SFML/Graphics.hpp>
 
 enum Stage { menu, settings, game };
+std::map<TileType, sf::Color> TileColors { {ocean, sf::Color::Blue} };
 
 class Catan {
     private:
         sf::RenderWindow* window;
         Stage stage;
         Map map;  
+
+
 
     public:        
         Catan(sf::RenderWindow* x) {
@@ -24,9 +27,23 @@ class Catan {
         void drawGame()
         {
             window->clear();
-            window->draw(sf::CircleShape(80, 6));
+            drawMap();
             window->display();
         }  
+
+        void drawMap()
+        {
+            size_t x = 0, y = 0;
+
+            for (y; y < map.height; y++)
+            {
+                for (x; x < map.width; x++)
+                {
+                    sf::CircleShape tile(80, 6);
+                    window->draw(tile);
+                }
+            }
+        }
     
 };
 
