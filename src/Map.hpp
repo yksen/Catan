@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <random>
 
 class Map {
     private:
@@ -15,6 +16,10 @@ class Map {
         std::vector<std::vector<Tile>> tileMap;
         
         void setMap(std::string mapName) {
+            std::random_device dev;
+            std::mt19937 rng(dev());
+            std::uniform_int_distribution<std::mt19937::result_type> dist(1, 5);
+
             name = mapName;
             std::string line, filePath = "../maps/" + mapName + ".txt";
             std::ifstream file(filePath);
@@ -29,11 +34,11 @@ class Map {
                     {
                         if (c == '0')
                         {
-                            tileMap[x][y] = Tile(ocean, 0);
+                            tileMap[x][y] = Tile(x, y, ocean, 0);
                         }
                         else
                         {
-                            tileMap[x][y] = Tile(hill, 7);
+                            tileMap[x][y] = Tile(x, y, TileType(dist(rng)), 7);
                         }     
                         x++;                   
                     }
