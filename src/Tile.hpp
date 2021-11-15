@@ -1,7 +1,7 @@
 #ifndef Tile_H
 #define Tile_H
 
-enum TileType { ocean, hill, forest, mountain, field, pasture };
+enum TileType { ocean, hill, forest, mountain, field, pasture, desert };
 
 class Tile {
     private:

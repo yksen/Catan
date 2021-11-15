@@ -7,6 +7,10 @@
 #include <vector>
 #include <random>
 
+std::random_device dev;
+std::mt19937 rng(dev());
+std::uniform_int_distribution<std::mt19937::result_type> typeDist(1, 6);
+
 class Map {
     private:
         std::string name;                
@@ -15,11 +19,7 @@ class Map {
         size_t width, height;
         std::vector<std::vector<Tile>> tileMap;
         
-        void setMap(std::string mapName) {
-            std::random_device dev;
-            std::mt19937 rng(dev());
-            std::uniform_int_distribution<std::mt19937::result_type> dist(1, 5);
-
+        void setMap(std::string mapName) {            
             name = mapName;
             std::string line, filePath = "../maps/" + mapName + ".txt";
             std::ifstream file(filePath);
@@ -38,7 +38,7 @@ class Map {
                         }
                         else
                         {
-                            tileMap[x][y] = Tile(x, y, TileType(dist(rng)), 7);
+                            tileMap[x][y] = Tile(x, y, TileType(typeDist(rng)), 7);
                         }     
                         x++;                   
                     }
