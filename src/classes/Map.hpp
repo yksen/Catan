@@ -23,7 +23,7 @@ class Map {
         
         void setMap(std::string mapName) {            
             name = mapName;
-            std::string line, filePath = "../maps/" + mapName + ".txt";
+            std::string line, filePath = "../assets/maps/" + mapName + ".txt";
             std::ifstream file(filePath);
             if (file.is_open())
             {
