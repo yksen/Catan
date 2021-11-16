@@ -29,6 +29,10 @@ class Catan {
         int borderSize = 5;    
         int tileSize = bgTileSize - borderSize;
 
+        int diceSize = 200;
+
+        std::vector<unsigned long> diceRolls;
+
     public:        
         Catan(sf::RenderWindow* x) {
             window = x;
@@ -43,12 +47,29 @@ class Catan {
         void drawGame()
         {
             window->clear();
+            drawDice();
             drawMap();
             window->display();
         }  
+        void drawDice()
+        {
+            diceTextures.setSmooth(true);
+            for (size_t i = 0; i < diceRolls.size(); i++)
+            {
+                auto value = diceRolls[i] - 1;
+                sf::RectangleShape diceFace(sf::Vector2f(diceSize, diceSize));
 
+                diceFace.setPosition(1920 - diceSize, i * diceSize);
+
+                diceFace.setTexture(&diceTextures);
+                diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
+
+                window->draw(diceFace);
+            }
+        }
         void drawMap()
         {
+            tileTextures.setSmooth(true);
             for (size_t y = 0; y < map.height; y++)
             {
                 for (size_t x = 0; x < map.width; x++)
@@ -78,8 +99,7 @@ class Catan {
         void rollTheDice()
         {
             std::vector<unsigned long> diceRolls = {diceDist(rng), diceDist(rng)};
-
-            std::cout << diceRolls[0] << diceRolls[1] << std::endl;
+            this->diceRolls = diceRolls;
         }
 };
 
