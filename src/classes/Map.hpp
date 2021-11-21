@@ -10,24 +10,48 @@
 
 std::random_device dev;
 std::mt19937 rng(dev());
-std::uniform_int_distribution<std::mt19937::result_type> typeDist(1, 6);
-std::uniform_int_distribution<std::mt19937::result_type> numberDist(2, 12);
 
 class Map {
-    private:
-        std::string name;                
-        
     public: 
+        std::string name;  
         size_t width, height;
+        std::vector<std::pair<int, int>> typeDistribution = {};
+        std::vector<std::pair<int, int>> numberDistribution = {};
         std::vector<std::vector<Tile>> tileMap;
         
         void setMap(std::string mapName) {            
-            name = mapName;
-            std::string line, filePath = "../assets/maps/" + mapName + ".txt";
+            this->name = mapName;
+            std::string filePath = "../assets/maps/" + mapName + ".txt";
+            this->typeDistribution.clear();
+            this->numberDistribution.clear();
+            readMapFromFile(filePath);
+        }
+        void readMapFromFile(std::string filePath)
+        {
             std::ifstream file(filePath);
             if (file.is_open())
             {
-                tileMap.resize(20, std::vector<Tile>(20));
+                std::string line;
+                std::vector<std::string> words;
+
+                getline(file, line);
+                words = readLine(line);
+                this->width = std::stoull(words[0]);
+                this->height = std::stoull(words[1]);
+                this->tileMap.resize(this->width, std::vector<Tile>(this->height));
+
+                getline(file, line);
+                words = readLine(line);
+                for (size_t i = 0; i < words.size(); i++)
+                    this->typeDistribution.push_back(std::pair<int, int> (int(i) + 1, std::stoi(words[i])));
+                eraseZeros(&this->typeDistribution);
+
+                getline(file, line);
+                words = readLine(line);
+                for (size_t i = 0; i < words.size(); i++)
+                    this->numberDistribution.push_back(std::pair<int, int> (int(i) + 2, std::stoi(words[i])));
+                eraseZeros(&this->numberDistribution);
+
                 size_t x = 0, y = 0;
                 while (getline(file, line))
                 {
@@ -36,19 +60,52 @@ class Map {
                     {
                         if (c == '0')
                         {
-                            tileMap[x][y] = Tile(x, y, ocean, 0);
+                            this->tileMap[x][y] = Tile(x, y, ocean, 0);
                         }
                         else
                         {
-                            tileMap[x][y] = Tile(x, y, TileType(typeDist(rng)), numberDist(rng));
+                            std::uniform_int_distribution<std::mt19937::result_type> typeDist(0, this->typeDistribution.size() - 1);
+                            std::uniform_int_distribution<std::mt19937::result_type> numberDist(0, this->numberDistribution.size() - 1);
+                            auto randomType = typeDist(rng);
+                            auto randomNumber = numberDist(rng);
+
+                            if (TileType(this->typeDistribution[randomType].first) == desert)
+                                this->tileMap[x][y] = Tile(x, y, TileType(this->typeDistribution[randomType].first), 0);
+                            else
+                            {
+                                this->tileMap[x][y] = Tile(x, y, TileType(this->typeDistribution[randomType].first), this->numberDistribution[randomNumber].first);
+                                this->numberDistribution[randomNumber].second -= 1;
+                                eraseZeros(&this->numberDistribution);
+                            }
+                            this->typeDistribution[randomType].second -= 1;
+                            eraseZeros(&this->typeDistribution);
                         }     
                         x++;                   
                     }
                     y++;
-                }                
-                file.close();
-                width = x;
-                height = y;
+                }               
+                file.close();                
+            }           
+        }
+        std::vector<std::string> readLine(std::string line)
+        {
+            std::vector<std::string> words;
+            size_t pos = 0;
+            while ((pos = line.find(" ")) != std::string::npos) {
+                words.push_back(line.substr(0, pos));
+                line.erase(0, pos + 1);
+            }
+            return words;
+        }
+        void eraseZeros(std::vector<std::pair<int, int>> *v)
+        {
+            for (size_t i = 0; i < (*v).size(); i++)
+            {
+                if ((*v)[i].second == 0)
+                {
+                    (*v).erase((*v).begin() + i);
+                    break;
+                }
             }
         }
 };
