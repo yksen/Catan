@@ -19,15 +19,13 @@ class Map {
         std::vector<std::pair<int, int>> numberDistribution = {};
         std::vector<std::vector<Tile>> tileMap;
         
-        void setMap(std::string mapName) {            
+        void loadFromFile(std::string mapName)
+        {
             this->name = mapName;
             std::string filePath = "../assets/maps/" + mapName + ".txt";
             this->typeDistribution.clear();
             this->numberDistribution.clear();
-            readMapFromFile(filePath);
-        }
-        void readMapFromFile(std::string filePath)
-        {
+            
             std::ifstream file(filePath);
             if (file.is_open())
             {
@@ -43,7 +41,7 @@ class Map {
                 getline(file, line);
                 words = readLine(line);
                 for (size_t i = 0; i < words.size(); i++)
-                    this->typeDistribution.push_back(std::pair<int, int> (int(i) + 1, std::stoi(words[i])));
+                    this->typeDistribution.push_back(std::pair<int, int> (int(i) + 2, std::stoi(words[i])));
                 eraseZeros(&this->typeDistribution);
 
                 getline(file, line);
