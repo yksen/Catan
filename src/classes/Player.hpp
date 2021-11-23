@@ -3,14 +3,13 @@
 
 #include <string>
 
-class Player {
-    private:
-
-    public:
-        std::string name;
-        Player() {
-            
-        }
+class Player
+{
+public:
+    std::string name;
+    Player()
+    {
+    }
 };
 
 #endif
