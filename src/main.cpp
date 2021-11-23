@@ -24,8 +24,12 @@ int main()
                 game.setMap("Standard");
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::RShift)
                 game.rollTheDice();
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter)
+                game.nextStage();
+            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
+                game.placeBuilding(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
         }
 
-        game.drawGame();
+        game.draw();
     }
 }

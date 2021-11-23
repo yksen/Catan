@@ -22,7 +22,8 @@ public:
     int x, y;
     TileType type;
     int number;
-    std::vector<Building> edges;
+    std::vector<Road> edges;
+    std::vector<City> vertices;
 
     Tile(int a = 0, int b = 0, TileType c = none, int d = 0)
     {
@@ -30,6 +31,8 @@ public:
         this->y = b;
         this->type = c;
         this->number = d;
+        this->edges.resize(6);
+        this->vertices.resize(6);
     }
 };
 

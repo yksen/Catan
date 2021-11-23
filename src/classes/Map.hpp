@@ -34,19 +34,19 @@ public:
             std::vector<std::string> words;
 
             getline(file, line);
-            words = readLine(line);
+            words = splitWords(line);
             this->width = std::stoull(words[0]);
             this->height = std::stoull(words[1]);
             this->tileMap.resize(this->width, std::vector<Tile>(this->height));
 
             getline(file, line);
-            words = readLine(line);
+            words = splitWords(line);
             for (size_t i = 0; i < words.size(); i++)
                 this->typeDistribution.push_back(std::pair<int, int>(int(i) + 2, std::stoi(words[i])));
             eraseZeros(&this->typeDistribution);
 
             getline(file, line);
-            words = readLine(line);
+            words = splitWords(line);
             for (size_t i = 0; i < words.size(); i++)
                 this->numberDistribution.push_back(std::pair<int, int>(int(i) + 2, std::stoi(words[i])));
             eraseZeros(&this->numberDistribution);
@@ -86,7 +86,7 @@ public:
             file.close();
         }
     }
-    std::vector<std::string> readLine(std::string line)
+    std::vector<std::string> splitWords(std::string line)
     {
         std::vector<std::string> words;
         size_t pos = 0;

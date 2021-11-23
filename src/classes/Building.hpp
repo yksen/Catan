@@ -1,17 +1,18 @@
 #ifndef Building_H
 #define Building_H
 
+#include "Player.hpp"
+
 class Building
 {
 public:
-    Building()
-    {
-    }
+    Player owner;
 };
 
 class City : Building
 {
 public:
+    int level = 1;
     City()
     {
     }
