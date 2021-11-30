@@ -37,13 +37,14 @@ public:
     int tileSize = bgTileSize - borderSize;
 
     int citySize = borderSize * 10;
+    int spotSize = citySize / 4;
 
     int numberSize = bgTileSize / 4;
     int diceSize = 200;
 
     std::vector<std::mt19937::result_type> diceRolls = {0, 0};
 
-    std::vector<sf::RectangleShape> buildings;
+    bool buildingsSpotsDrawingEnabled = true;
 
     Catan(sf::RenderWindow *a, sf::Vector2u b)
     {
@@ -109,7 +110,7 @@ public:
         drawMap();
     }
     void drawLeaderboard()
-    {        
+    {
         auto text = centerText("Leaderboard");
         this->window->draw(text);
         drawCenterCross();
@@ -119,6 +120,8 @@ public:
         drawTiles();
         drawNumbers();
         drawBuildings();
+        if (buildingsSpotsDrawingEnabled)
+            drawBuildingSpots();
     }
     void drawTiles()
     {
@@ -149,29 +152,6 @@ public:
 
                     this->window->draw(bgTileShape);
                     this->window->draw(tileShape);
-
-                    if (tile.type != ocean && tile.type != desert)
-                    {
-                        sf::CircleShape numberShape(numberSize);
-                        sf::Text numberText;
-
-                        numberShape.setOrigin(numberSize, numberSize);
-                        numberShape.setPosition(position);
-                        numberShape.setFillColor(sf::Color::White);
-
-                        numberText.setFont(font);
-                        numberText.setFillColor(sf::Color::Black);
-                        numberText.setStyle(sf::Text::Bold);
-                        numberText.setString(std::to_string(tile.number));
-                        numberText.setCharacterSize(std::floor(numberSize));
-
-                        sf::FloatRect textSize = numberText.getLocalBounds();
-                        numberText.setOrigin(textSize.width / 2, textSize.height);
-                        numberText.setPosition(position);
-
-                        this->window->draw(numberShape);
-                        this->window->draw(numberText);
-                    }
                 }
             }
         }
@@ -213,8 +193,37 @@ public:
     }
     void drawBuildings()
     {
-        for (auto building : this->buildings)
-            this->window->draw(building);
+        for (auto tileRow : map.tileMap)
+        {
+            for (auto tile : tileRow)
+            {
+                for (auto building : tile.vertices)
+                    if (building.isBuilt)
+                        window->draw(building.rect);
+                for (auto building : tile.edges)
+                    if (building.isBuilt)
+                        window->draw(building.rect);
+            }
+        }
+    }
+    void drawBuildingSpots()
+    {
+        for (auto tileRow : map.tileMap)
+        {
+            for (auto tile : tileRow)
+            {
+                for (auto building : tile.vertices)
+                {
+                    if (!building.isBuilt)
+                        this->window->draw(building.spot);
+                }
+                for (auto building : tile.edges)
+                {
+                    if (!building.isBuilt)
+                        this->window->draw(building.spot);
+                }
+            }
+        }
     }
     void drawDice()
     {
@@ -236,6 +245,56 @@ public:
         }
     }
 
+    sf::Vector2f getVertexShift(int n)
+    {
+        switch (n)
+        {
+        case 0:
+            return sf::Vector2f(0, -bgTileHeight / 2);
+            break;
+        case 1:
+            return sf::Vector2f(bgTileWidth / 2, -bgTileHeight / 4);
+            break;
+        case 2:
+            return sf::Vector2f(bgTileWidth / 2, bgTileHeight / 4);
+            break;
+        case 3:
+            return sf::Vector2f(0, bgTileHeight / 2);
+            break;
+        case 4:
+            return sf::Vector2f(-bgTileWidth / 2, bgTileHeight / 4);
+            break;
+        case 5:
+            return sf::Vector2f(-bgTileWidth / 2, -bgTileHeight / 4);
+            break;
+        }
+        return sf::Vector2f(0, 0);
+    }
+    sf::Vector2f getEdgeShift(int n)
+    {
+        switch (n)
+        {
+        case 0:
+            return sf::Vector2f(bgTileWidth / 4, -1.5 * bgTileHeight / 4);
+            break;
+        case 1:
+            return sf::Vector2f(bgTileWidth / 2, 0);
+            break;
+        case 2:
+            return sf::Vector2f(bgTileWidth / 4, 1.5 * bgTileHeight / 4);
+            break;
+        case 3:
+            return sf::Vector2f(-bgTileWidth / 4, 1.5 * bgTileHeight / 4);
+            break;
+        case 4:
+            return sf::Vector2f(-bgTileWidth / 2, 0);
+            break;
+        case 5:
+            return sf::Vector2f(-bgTileWidth / 4, -1.5 * bgTileHeight / 4);
+            break;
+        }
+        return sf::Vector2f(0, 0);
+    }
     void nextStage()
     {
         this->stage = Stage((this->stage + 1) % 4);
@@ -243,6 +302,7 @@ public:
     void setMap(std::string mapName)
     {
         map.loadFromFile(mapName);
+        generateBuildingSpots();
     }
     void rollTheDice()
     {
@@ -252,16 +312,42 @@ public:
     }
     void placeBuilding(sf::Vector2f mousePos)
     {
-        sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+        //     for (auto tileRow : map.tileMap)
+        //         for (auto tile : tileRow)
+        //         {
+        //             for (auto spot : tile.citySpots)
+        //             {
+        //                 auto spotRect = spot.first;
+        //                 if (spotRect.getGlobalBounds().contains(mousePos))
+        //                 {
+        //                     sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
 
-        building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
-        building.setPosition(mousePos);
+        //                     building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
+        //                     building.setPosition(spotRect.getGlobalBounds().width / 2, spotRect.getGlobalBounds().height / 2);
 
-        building.setTexture(&buildingsTextures);
-        std::uniform_int_distribution<std::mt19937::result_type> dist(0, 1);
-        building.setTextureRect(sf::IntRect(dist(rng) * this->textureSize, 0, this->textureSize, this->textureSize));
+        //                     building.setTexture(&buildingsTextures);
+        //                     building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
 
-        this->buildings.push_back(building);
+        //                     tile.vertices[spot.second].isBuilt = true;
+        //                 }
+        //             }
+        //             for (auto spot : tile.roadSpots)
+        //             {
+        //                 auto spotRect = spot.first;
+        //                 if (spotRect.getGlobalBounds().contains(mousePos))
+        //                 {
+        //                     sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+
+        //                     building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
+        //                     building.setPosition(spotRect.getGlobalBounds().width / 2, spotRect.getGlobalBounds().height / 2);
+
+        //                     building.setTexture(&buildingsTextures);
+        //                     building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
+
+        //                     tile.edges[spot.second].isBuilt = true;
+        //                 }
+        //             }
+        //         }
     }
 
     sf::Text centerText(std::string txt)
@@ -279,7 +365,47 @@ public:
 
         return text;
     }
-    
+    void generateBuildingSpots()
+    {
+        for (auto &tileRow : map.tileMap)
+        {
+            for (auto &tile : tileRow)
+            {
+                if (tile.isLand())
+                {
+                    for (size_t i = 0; i < 6; i++)
+                    {
+                        sf::CircleShape* spot = &tile.vertices[i].spot;
+                        spot->setRadius(spotSize);
+                        spot->setFillColor(sf::Color::Yellow);
+                        spot->setOrigin(sf::Vector2f(spotSize, spotSize));
+                        auto shift = getVertexShift(i);
+                        sf::Vector2f position(
+                            bgTileWidth / 2 + tile.x * bgTileWidth + ((tile.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
+                            bgTileHeight / 2 + tile.y * (3 * (bgTileHeight / 4)) + shift.y);
+                        spot->setPosition(position);
+
+                        spot = &tile.edges[i].spot;
+                        spot->setRadius(spotSize);
+                        spot->setFillColor(sf::Color::Yellow);
+                        spot->setOrigin(sf::Vector2f(spotSize, spotSize));
+                        shift = getEdgeShift(i);
+                        position = sf::Vector2f(
+                            bgTileWidth / 2 + tile.x * bgTileWidth + ((tile.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
+                            bgTileHeight / 2 + tile.y * (3 * (bgTileHeight / 4)) + shift.y);
+                        spot->setPosition(position);
+                    }
+                }
+            }
+        }
+    }
+    void debug()
+    {
+        for (auto tileRow : map.tileMap)
+            for (auto tile : tileRow)
+                for (auto vertex : tile.vertices)
+                    std::cout << vertex.spot.getRadius() << std::endl;
+    }
 };
 
 #endif

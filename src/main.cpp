@@ -26,6 +26,9 @@ int main()
                 game.rollTheDice();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter)
                 game.nextStage();
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LShift)
+                game.debug();
+                // game.buildingsSpotsDrawingEnabled = !game.buildingsSpotsDrawingEnabled;
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
                 game.placeBuilding(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
         }

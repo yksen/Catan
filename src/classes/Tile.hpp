@@ -22,8 +22,8 @@ public:
     int x, y;
     TileType type;
     int number;
-    std::vector<Road> edges;
     std::vector<City> vertices;
+    std::vector<Road> edges;
 
     Tile(int a = 0, int b = 0, TileType c = none, int d = 0)
     {
@@ -31,8 +31,16 @@ public:
         this->y = b;
         this->type = c;
         this->number = d;
-        this->edges.resize(6);
         this->vertices.resize(6);
+        this->edges.resize(6);
+    }
+
+    bool isLand()
+    {
+        if (this->type != none && this->type != ocean)
+            return true;
+        else
+            return false;
     }
 };
 

@@ -7,9 +7,12 @@ class Building
 {
 public:
     Player owner;
+    bool isBuilt = false;
+    sf::RectangleShape rect;
+    sf::CircleShape spot;
 };
 
-class City : Building
+class City : public Building
 {
 public:
     int level = 1;
@@ -18,7 +21,7 @@ public:
     }
 };
 
-class Road : Building
+class Road : public Building
 {
 public:
     Road()
