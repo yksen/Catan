@@ -9,7 +9,7 @@ public:
     Player owner;
     bool isBuilt = false;
     sf::RectangleShape rect;
-    sf::CircleShape spot;
+    sf::CircleShape circle;
 };
 
 class City : public Building

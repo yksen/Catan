@@ -215,12 +215,12 @@ public:
                 for (auto building : tile.vertices)
                 {
                     if (!building.isBuilt)
-                        this->window->draw(building.spot);
+                        this->window->draw(building.circle);
                 }
                 for (auto building : tile.edges)
                 {
                     if (!building.isBuilt)
-                        this->window->draw(building.spot);
+                        this->window->draw(building.circle);
                 }
             }
         }
@@ -307,47 +307,49 @@ public:
     void rollTheDice()
     {
         std::uniform_int_distribution<std::mt19937::result_type> diceDist(1, 6);
-        std::vector<unsigned long> diceRolls = {diceDist(rng), diceDist(rng)};
+        std::vector<std::mt19937::result_type> diceRolls = {diceDist(rng), diceDist(rng)};
         this->diceRolls = diceRolls;
     }
     void placeBuilding(sf::Vector2f mousePos)
     {
-        //     for (auto tileRow : map.tileMap)
-        //         for (auto tile : tileRow)
-        //         {
-        //             for (auto spot : tile.citySpots)
-        //             {
-        //                 auto spotRect = spot.first;
-        //                 if (spotRect.getGlobalBounds().contains(mousePos))
-        //                 {
-        //                     sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+        for (auto &tileRow : map.tileMap)
+        {
+            for (auto &tile : tileRow)
+            {
+                for (auto &spot : tile.vertices)
+                {
+                    auto spotCircle = spot.circle;
+                    if (spotCircle.getGlobalBounds().contains(mousePos))
+                    {
+                        sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
 
-        //                     building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
-        //                     building.setPosition(spotRect.getGlobalBounds().width / 2, spotRect.getGlobalBounds().height / 2);
+                        building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
+                        building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
+                        building.setTexture(&buildingsTextures);
+                        building.setTextureRect(sf::IntRect(0, 0, this->textureSize, this->textureSize));
 
-        //                     building.setTexture(&buildingsTextures);
-        //                     building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
+                        spot.rect = building;
+                        spot.isBuilt = true;
+                    }
+                }
+                for (auto &spot : tile.edges)
+                {
+                    auto spotCircle = spot.circle;
+                    if (spotCircle.getGlobalBounds().contains(mousePos))
+                    {
+                        sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
 
-        //                     tile.vertices[spot.second].isBuilt = true;
-        //                 }
-        //             }
-        //             for (auto spot : tile.roadSpots)
-        //             {
-        //                 auto spotRect = spot.first;
-        //                 if (spotRect.getGlobalBounds().contains(mousePos))
-        //                 {
-        //                     sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+                        building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
+                        building.setPosition(spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().height / 2);
 
-        //                     building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
-        //                     building.setPosition(spotRect.getGlobalBounds().width / 2, spotRect.getGlobalBounds().height / 2);
+                        building.setTexture(&buildingsTextures);
+                        building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
 
-        //                     building.setTexture(&buildingsTextures);
-        //                     building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
-
-        //                     tile.edges[spot.second].isBuilt = true;
-        //                 }
-        //             }
-        //         }
+                        spot.isBuilt = true;
+                    }
+                }
+            }
+        }
     }
 
     sf::Text centerText(std::string txt)
@@ -375,7 +377,7 @@ public:
                 {
                     for (size_t i = 0; i < 6; i++)
                     {
-                        sf::CircleShape* spot = &tile.vertices[i].spot;
+                        sf::CircleShape *spot = &tile.vertices[i].circle;
                         spot->setRadius(spotSize);
                         spot->setFillColor(sf::Color::Yellow);
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
@@ -385,7 +387,7 @@ public:
                             bgTileHeight / 2 + tile.y * (3 * (bgTileHeight / 4)) + shift.y);
                         spot->setPosition(position);
 
-                        spot = &tile.edges[i].spot;
+                        spot = &tile.edges[i].circle;
                         spot->setRadius(spotSize);
                         spot->setFillColor(sf::Color::Yellow);
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
@@ -401,10 +403,7 @@ public:
     }
     void debug()
     {
-        for (auto tileRow : map.tileMap)
-            for (auto tile : tileRow)
-                for (auto vertex : tile.vertices)
-                    std::cout << vertex.spot.getRadius() << std::endl;
+        
     }
 };
 
