@@ -36,8 +36,8 @@ public:
     int borderSize = bgTileSize / 19;
     int tileSize = bgTileSize - borderSize;
 
-    int citySize = borderSize * 10;
-    int spotSize = citySize / 4;
+    int buildingSize = borderSize * 10;
+    int spotSize = buildingSize / 4;
 
     int numberSize = bgTileSize / 4;
     int diceSize = 200;
@@ -197,10 +197,10 @@ public:
         {
             for (auto tile : tileRow)
             {
-                for (auto building : tile.vertices)
+                for (auto building : tile.edges)
                     if (building.isBuilt)
                         window->draw(building.rect);
-                for (auto building : tile.edges)
+                for (auto building : tile.vertices)
                     if (building.isBuilt)
                         window->draw(building.rect);
             }
@@ -321,9 +321,9 @@ public:
                     auto spotCircle = spot.circle;
                     if (spotCircle.getGlobalBounds().contains(mousePos))
                     {
-                        sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+                        sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize));
 
-                        building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
+                        building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 2));
                         building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
                         building.setTexture(&buildingsTextures);
                         building.setTextureRect(sf::IntRect(0, 0, this->textureSize, this->textureSize));
@@ -332,21 +332,26 @@ public:
                         spot.isBuilt = true;
                     }
                 }
+                int i = 0;
                 for (auto &spot : tile.edges)
                 {
                     auto spotCircle = spot.circle;
                     if (spotCircle.getGlobalBounds().contains(mousePos))
                     {
-                        sf::RectangleShape building(sf::Vector2f(this->citySize, this->citySize));
+                        sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
 
-                        building.setOrigin(sf::Vector2f(this->citySize / 2, this->citySize / 2));
-                        building.setPosition(spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().height / 2);
+                        building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 4 / 2));
+                        building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
 
                         building.setTexture(&buildingsTextures);
-                        building.setTextureRect(sf::IntRect(this->textureSize, 0, this->textureSize, this->textureSize));
+                        building.setTextureRect(sf::IntRect(this->textureSize * 2, 3 * this->textureSize / 4, this->textureSize, this->textureSize / 4));
+                        
+                        building.setRotation(30 + 60 * (i % 3));
 
+                        spot.rect = building;
                         spot.isBuilt = true;
                     }
+                    i++;
                 }
             }
         }
