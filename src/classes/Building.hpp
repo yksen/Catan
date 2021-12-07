@@ -10,6 +10,10 @@ public:
     bool isBuilt = false;
     sf::RectangleShape rect;
     sf::CircleShape circle;
+
+    Building()
+    {
+    }
 };
 
 class City : public Building

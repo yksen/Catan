@@ -22,15 +22,27 @@ int main()
                 window.close();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Space)
                 game.setMap("Standard");
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::RShift)
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::RShift && game.turnState == dice)
                 game.rollTheDice();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter)
-                game.nextStage();
+                game.nextGameState();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LShift)
-                game.debug();
-                // game.buildingsSpotsDrawingEnabled = !game.buildingsSpotsDrawingEnabled;
+                game.endTurn();
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::S)
+            {
+                game.turnState = build;
+                game.chosenProduct = settlement;
+            }
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::R)
+            {
+                game.turnState = build;
+                game.chosenProduct = road;
+            }
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
-                game.placeBuilding(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
+            {
+                game.placeBuilding(game.chosenProduct, sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
+
+            }
         }
 
         game.draw();
