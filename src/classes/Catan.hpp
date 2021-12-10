@@ -48,8 +48,8 @@ public:
     sf::RenderWindow *window;
     sf::Vector2u windowSize;
 
-    GameState gameState;
-    TurnState turnState;
+    GameState gameState = menu;
+    TurnState turnState = setup;
     Map map;
 
     sf::Font font;
@@ -57,21 +57,22 @@ public:
 
     const int textureSize = 256;
 
-    int gameStateWidth;
-    int gameStateHeight;
+    float gameStateWidth;
+    float gameStateHeight;
 
-    int bgTileSize = 95;
-    int bgTileWidth = bgTileSize * sqrt(3);
-    int bgTileHeight = bgTileSize * 2;
+    float bgTileSize = 95;
+    float bgTileWidth = bgTileSize * sqrt(3);
+    float bgTileHeight = bgTileSize * 2;
 
-    int borderSize = bgTileSize / 19;
-    int tileSize = bgTileSize - borderSize;
+    float borderSize = bgTileSize / 19;
+    float tileSize = bgTileSize - borderSize;
 
-    int buildingSize = borderSize * 10;
-    int spotSize = buildingSize / 4;
+    float buildingSize = borderSize * 10;
+    float spotSize = buildingSize / 4;
 
-    int numberSize = bgTileSize / 4;
-    int diceSize = 100;
+    float numberSize = bgTileSize / 4;
+
+    sf::Color spotColor = sf::Color::Cyan;
 
     std::vector<std::mt19937::result_type> diceRolls = {0, 0};
 
@@ -93,14 +94,12 @@ public:
         this->buildingsTextures.setSmooth(true);
         this->diceTextures.setSmooth(true);
         this->font.loadFromFile("../assets/fonts/arial.ttf");
-        this->gameState = menu;
-        this->turnState = idle;
     }
 
     void draw()
     {
-        this->window->clear();
-        switch (this->gameState)
+        window->clear();
+        switch (gameState)
         {
         case menu:
             drawMenu();
@@ -109,13 +108,14 @@ public:
             drawSettings();
             break;
         case game:
+            window->clear(sf::Color(30, 30, 200));
             drawGame();
             break;
         case leaderboard:
             drawLeaderboard();
             break;
         }
-        this->window->display();
+        window->display();
     }
     void drawCenterCross()
     {
@@ -145,7 +145,6 @@ public:
     {
         drawMap();
         drawGameState();
-        drawDice();
     }
     void drawLeaderboard()
     {
@@ -155,13 +154,40 @@ public:
     }
     void drawGameState()
     {
-        sf::RectangleShape background(sf::Vector2f(this->gameStateWidth, this->gameStateHeight));
+        float gSW = gameStateWidth / 100;
+        float gSH = gameStateHeight / 100;
+
+        sf::RectangleShape background(sf::Vector2f(gameStateWidth, gameStateHeight));
         background.setFillColor(sf::Color::White);
-
+        background.setOutlineColor(sf::Color::Black);
+        background.setOutlineThickness(gSW);
         sf::Vector2f backgroundPos(windowSize.x - gameStateWidth, 0);
+        sf::Vector2f backgroundCenterOffset((int)-windowSize.x + gameStateWidth / 2, -gameStateHeight / 2);
         background.setPosition(backgroundPos);
+        window->draw(background);
 
-        this->window->draw(background);
+        sf::RectangleShape diceBackground(sf::Vector2f(90 * gSW, 20 * gSH));
+        diceBackground.setFillColor(sf::Color::Cyan);
+        diceBackground.setOutlineColor(sf::Color::Black);
+        diceBackground.setOutlineThickness(gSW);
+        diceBackground.setOrigin(backgroundCenterOffset);
+        diceBackground.setPosition(-45 * gSW, -48 * gSH);
+        window->draw(diceBackground);
+
+        if (this->diceRolls[0] != 0)
+            for (size_t i = 0; i < diceRolls.size(); i++)
+            {
+                auto value = diceRolls[i] - 1;
+                sf::RectangleShape diceFace(sf::Vector2f(18 * gSH, 18 * gSH));
+                diceFace.setOrigin(backgroundCenterOffset.x, backgroundCenterOffset.y + 48 * gSH);
+                diceFace.setPosition(-42 * gSW + i * 43.5 * gSW, 1 * gSH);
+                diceFace.setTexture(&diceTextures);
+                diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
+                window->draw(diceFace);
+            }
+
+        
+
     }
     void drawMap()
     {
@@ -261,11 +287,19 @@ public:
             {
                 for (auto tile : tileRow)
                 {
-                    if (type == settlement || type == city)
+                    if (type == settlement)
                     {
                         for (auto building : tile.vertices)
                         {
                             if (!building.isBuilt)
+                                this->window->draw(building.circle);
+                        }
+                    }
+                    if (type == city)
+                    {
+                        for (auto building : tile.vertices)
+                        {
+                            if (building.isBuilt && building.level == 1)
                                 this->window->draw(building.circle);
                         }
                     }
@@ -281,29 +315,10 @@ public:
             }
         }
     }
-    void drawDice()
-    {
-        if (this->diceRolls[0] != 0)
-        {
-            for (size_t i = 0; i < diceRolls.size(); i++)
-            {
-                auto value = diceRolls[i] - 1;
-
-                sf::RectangleShape diceFace(sf::Vector2f(diceSize, diceSize));
-
-                diceFace.setPosition(windowSize.x - gameStateWidth / 2 - i * diceSize, diceSize);
-
-                diceFace.setTexture(&this->diceTextures);
-                diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
-
-                this->window->draw(diceFace);
-            }
-        }
-    }
 
     void endTurn()
     {
-        turnState = dice;
+        turnState = (turnState == setup) ? setup : dice;
         currentPlayer = (currentPlayer + 1 < players.end()) ? currentPlayer + 1 : players.begin();
     }
     bool canBuy(Product type)
@@ -321,6 +336,14 @@ public:
         chosenProduct = type;
         if (canBuy(chosenProduct))
             turnState = build;
+    }
+    void payForProduct(Product type)
+    {
+        auto cost = ProductCost[type];
+        for (auto pair : cost)
+        {
+            currentPlayer->resources[pair.first] -= pair.second;
+        }
     }
     sf::Vector2f getVertexShift(int n)
     {
@@ -398,7 +421,7 @@ public:
             {
                 for (auto &tile : tileRow)
                 {
-                    if (type == settlement || type == city)
+                    if (type == settlement)
                     {
                         for (auto &spot : tile.vertices)
                         {
@@ -413,8 +436,28 @@ public:
                                 building.setTextureRect(sf::IntRect(0, 0, this->textureSize, this->textureSize));
                                 building.setFillColor(currentPlayer->color);
                                 spot.rect = building;
+
+                                payForProduct(chosenProduct);
                                 spot.isBuilt = true;
                                 spot.owner = *currentPlayer;
+                                currentPlayer->points += 1;
+                                turnState = idle;
+                            }
+                        }
+                    }
+                    if (type == city)
+                    {
+                        for (auto &spot : tile.vertices)
+                        {
+                            auto spotCircle = spot.circle;
+                            if (spotCircle.getGlobalBounds().contains(mousePos) && spot.level == 1)
+                            {
+                                auto &building = spot.rect;
+                                building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
+
+                                payForProduct(chosenProduct);
+                                spot.level = 2;
+                                currentPlayer->points += 1;
                                 turnState = idle;
                             }
                         }
@@ -434,10 +477,10 @@ public:
                                 building.setTexture(&buildingsTextures);
                                 building.setTextureRect(sf::IntRect(this->textureSize * 2, 3 * this->textureSize / 4, this->textureSize, this->textureSize / 4));
                                 building.setFillColor(currentPlayer->color);
-
                                 building.setRotation(30 + 60 * (i % 3));
-
                                 spot.rect = building;
+
+                                payForProduct(chosenProduct);
                                 spot.isBuilt = true;
                                 spot.owner = *currentPlayer;
                                 turnState = idle;
@@ -449,7 +492,6 @@ public:
             }
         }
     }
-
     sf::Text centerText(std::string txt)
     {
         auto size = this->windowSize;
@@ -477,7 +519,9 @@ public:
                     {
                         sf::CircleShape *spot = &tile.vertices[i].circle;
                         spot->setRadius(spotSize);
-                        spot->setFillColor(sf::Color::Yellow);
+                        spot->setFillColor(spotColor);
+                        spot->setOutlineColor(sf::Color::Black);
+                        spot->setOutlineThickness(spotSize / 10);
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
                         auto shift = getVertexShift(i);
                         sf::Vector2f position(
@@ -487,7 +531,9 @@ public:
 
                         spot = &tile.edges[i].circle;
                         spot->setRadius(spotSize);
-                        spot->setFillColor(sf::Color::Yellow);
+                        spot->setFillColor(spotColor);
+                        spot->setOutlineColor(sf::Color::Black);
+                        spot->setOutlineThickness(spotSize / 10);
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
                         shift = getEdgeShift(i);
                         position = sf::Vector2f(
@@ -499,8 +545,11 @@ public:
             }
         }
     }
+
     void debug()
     {
+        for (auto player : players)
+            std::cout << player.name << ": " << player.points << std::endl;
     }
 };
 
