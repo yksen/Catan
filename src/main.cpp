@@ -33,17 +33,26 @@ int main()
                 game.turnState = build;
                 game.chosenProduct = settlement;
             }
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::C)
+            {
+                game.turnState = build;
+                game.chosenProduct = city;
+            }
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::R)
             {
                 game.turnState = build;
                 game.chosenProduct = road;
             }
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::F3)
+                game.debug();
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
             {
                 game.placeBuilding(game.chosenProduct, sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
 
             }
         }
+
+        
 
         game.draw();
     }
