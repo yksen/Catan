@@ -108,7 +108,7 @@ public:
             drawSettings();
             break;
         case game:
-            window->clear(sf::Color(30, 30, 200));
+            window->clear(sf::Color(0, 157, 174));
             drawGame();
             break;
         case leaderboard:
@@ -154,12 +154,18 @@ public:
     }
     void drawGameState()
     {
+        std::vector<sf::Color> colorPalette = {
+            sf::Color(0, 157, 174),
+            sf::Color(113, 223, 231),
+            sf::Color(194, 255, 249),
+            sf::Color(255, 230, 82)};
+
         float gSW = gameStateWidth / 100;
         float gSH = gameStateHeight / 100;
 
         sf::RectangleShape background(sf::Vector2f(gameStateWidth, gameStateHeight));
-        background.setFillColor(sf::Color::White);
-        background.setOutlineColor(sf::Color::Black);
+        background.setFillColor(colorPalette[1]);
+        background.setOutlineColor(sf::Color::White);
         background.setOutlineThickness(gSW);
         sf::Vector2f backgroundPos(windowSize.x - gameStateWidth, 0);
         sf::Vector2f backgroundCenterOffset((int)-windowSize.x + gameStateWidth / 2, -gameStateHeight / 2);
@@ -167,9 +173,7 @@ public:
         window->draw(background);
 
         sf::RectangleShape diceBackground(sf::Vector2f(90 * gSW, 20 * gSH));
-        diceBackground.setFillColor(sf::Color::Cyan);
-        diceBackground.setOutlineColor(sf::Color::Black);
-        diceBackground.setOutlineThickness(gSW);
+        diceBackground.setFillColor(colorPalette[2]);
         diceBackground.setOrigin(backgroundCenterOffset);
         diceBackground.setPosition(-45 * gSW, -48 * gSH);
         window->draw(diceBackground);
@@ -185,9 +189,6 @@ public:
                 diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
                 window->draw(diceFace);
             }
-
-        
-
     }
     void drawMap()
     {
@@ -216,7 +217,7 @@ public:
                     tileShape.setPosition(position);
 
                     if (tile.type == ocean)
-                        bgTileShape.setFillColor(sf::Color(26, 140, 255));
+                        bgTileShape.setFillColor(sf::Color(0, 157, 174));
                     else
                         bgTileShape.setFillColor(sf::Color::White);
 
@@ -299,7 +300,7 @@ public:
                     {
                         for (auto building : tile.vertices)
                         {
-                            if (building.isBuilt && building.level == 1)
+                            if (building.isBuilt && building.level == 1 && building.owner.id == currentPlayer->id)
                                 this->window->draw(building.circle);
                         }
                     }
@@ -450,7 +451,7 @@ public:
                         for (auto &spot : tile.vertices)
                         {
                             auto spotCircle = spot.circle;
-                            if (spotCircle.getGlobalBounds().contains(mousePos) && spot.level == 1)
+                            if (spotCircle.getGlobalBounds().contains(mousePos) && spot.level == 1 && spot.owner.id == currentPlayer->id)
                             {
                                 auto &building = spot.rect;
                                 building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
@@ -549,7 +550,8 @@ public:
     void debug()
     {
         for (auto player : players)
-            std::cout << player.name << ": " << player.points << std::endl;
+            std::cout << player.name << ": " << player.id << std::endl;
+        std::cout << turnState << std::endl;
     }
 };
 
