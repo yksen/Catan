@@ -4,13 +4,20 @@
 #include <string>
 #include <SFML/Graphics.hpp>
 
+enum Product
+{
+    settlement,
+    city,
+    road,
+    card
+};
 enum Resource
 {
     brick,
     lumber,
-    ore,
+    wool,
     grain,
-    wool
+    ore
 };
 
 int commonId = 0;
@@ -19,16 +26,18 @@ class Player
 {
 public:
     int id;
-    std::string name;
+    std::wstring name;
     sf::Color color;
     int points = 0;
     std::map<Resource, int> resources{
-        {brick, 999}, {lumber, 999}, {ore, 999}, {grain, 999}, {wool, 999}};
+        {brick, 9}, {lumber, 9}, {ore, 9}, {grain, 9}, {wool, 9}};
+    std::map<Product, int> buildings{
+        {settlement, 5}, {city, 4}, {road, 15}};
 
     Player()
     {
     }
-    Player(std::string name, sf::Color color)
+    Player(std::wstring name, sf::Color color)
     {
         this->id = commonId++;
         this->name = name;

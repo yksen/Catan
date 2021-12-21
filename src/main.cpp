@@ -29,30 +29,16 @@ int main()
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LShift)
                 game.endTurn();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::S)
-            {
-                game.turnState = build;
-                game.chosenProduct = settlement;
-            }
+                game.chooseProduct(settlement);
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::C)
-            {
-                game.turnState = build;
-                game.chosenProduct = city;
-            }
+                game.chooseProduct(city);
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::R)
-            {
-                game.turnState = build;
-                game.chosenProduct = road;
-            }
+                game.chooseProduct(road);
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::F3)
-                game.debug();
+                game.debugingEnabled = !game.debugingEnabled;
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
-            {
-                game.placeBuilding(game.chosenProduct, sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
-
-            }
+                game.processMouseClick(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
         }
-
-        
 
         game.draw();
     }
