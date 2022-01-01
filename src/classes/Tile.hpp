@@ -3,6 +3,7 @@
 
 #include "Building.hpp"
 #include <vector>
+#include <SFML/System.hpp>
 
 enum TileType
 {
@@ -19,15 +20,14 @@ enum TileType
 class Tile
 {
 public:
-    int x, y;
+    sf::Vector2i position;
     TileType type;
     int number;
     std::vector<City> vertices;
     std::vector<Road> edges;
 
     Tile(int a = 0, int b = 0, TileType c = none, int d = 0)
-        : x(a),
-          y(b),
+        : position(a, b),
           type(c),
           number(d)
     {
