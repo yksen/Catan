@@ -81,6 +81,7 @@ public:
     Product chosenProduct;
 
     bool debugingEnabled = false;
+    bool buildingPlaced = false;
 
     Catan(sf::RenderWindow *a, sf::Vector2u b)
         : window(a),
@@ -126,26 +127,26 @@ public:
     }
     void drawCenterCross()
     {
-        auto size = this->windowSize;
+        auto size = windowSize;
         sf::RectangleShape xAxis(sf::Vector2f(size.x, 3));
         sf::RectangleShape yAxis(sf::Vector2f(3, size.y));
         xAxis.setFillColor(sf::Color::Red);
         yAxis.setFillColor(sf::Color::Red);
         xAxis.setPosition(sf::Vector2f(0, size.y / 2 - 1.5));
         yAxis.setPosition(sf::Vector2f(size.x / 2 - 1.5, 0));
-        this->window->draw(xAxis);
-        this->window->draw(yAxis);
+        window->draw(xAxis);
+        window->draw(yAxis);
     }
     void drawMenu()
     {
         auto text = centerText("Menu");
-        this->window->draw(text);
+        window->draw(text);
         drawCenterCross();
     }
     void drawSettings()
     {
         auto text = centerText("Settings");
-        this->window->draw(text);
+        window->draw(text);
         drawCenterCross();
     }
     void drawGame()
@@ -156,7 +157,7 @@ public:
     void drawLeaderboard()
     {
         auto text = centerText("Leaderboard");
-        this->window->draw(text);
+        window->draw(text);
         drawCenterCross();
     }
     void drawGameState()
@@ -271,7 +272,7 @@ public:
                 button.setOrigin(backgroundCenterOffset);
                 button.setPosition(sf::Vector2f());
 
-                window->draw(button);
+                // window->draw(button);
             }
         }
     }
@@ -358,10 +359,16 @@ public:
             {
                 for (auto building : tile.edges)
                     if (building.isBuilt)
-                        window->draw(building.rect);
+                        window->draw(building.rect);                
+            }
+        }
+        for (auto tileRow : map.tileMap)
+        {
+            for (auto tile : tileRow)
+            {
                 for (auto building : tile.vertices)
                     if (building.isBuilt)
-                        window->draw(building.rect);
+                        window->draw(building.rect);               
             }
         }
     }
@@ -514,22 +521,25 @@ public:
                     for (auto &spot : tile.vertices)
                     {
                         auto spotCircle = spot.circle;
-                        if (spotCircle.getGlobalBounds().contains(mousePos))
+                        if (spotCircle.getGlobalBounds().contains(mousePos) && spot.isBuilt == false)
                         {
-                            sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize));
-
-                            building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 2));
-                            building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
-                            building.setTexture(&buildingsTextures);
-                            building.setTextureRect(sf::IntRect(0, 0, this->textureSize, this->textureSize));
-                            building.setFillColor(currentPlayer->color);
-                            spot.rect = building;
-
-                            payForProduct(chosenProduct);
                             spot.isBuilt = true;
                             spot.owner = *currentPlayer;
-                            currentPlayer->points += 1;
-                            turnState = idle;
+
+                            if (!buildingPlaced)
+                            {
+                                sf::RectangleShape building(sf::Vector2f(buildingSize, buildingSize));
+                                building.setOrigin(sf::Vector2f(buildingSize / 2, buildingSize / 2));
+                                building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
+                                building.setTexture(&buildingsTextures);
+                                building.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
+                                building.setFillColor(currentPlayer->color);
+                                spot.rect = building;
+                                payForProduct(chosenProduct);
+                                currentPlayer->points += 1;
+                                turnState = idle;
+                                buildingPlaced = true;
+                            }
                         }
                     }
                 }
@@ -540,13 +550,17 @@ public:
                         auto spotCircle = spot.circle;
                         if (spotCircle.getGlobalBounds().contains(mousePos) && spot.level == 1 && spot.owner.id == currentPlayer->id)
                         {
-                            auto &building = spot.rect;
-                            building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
-
-                            payForProduct(chosenProduct);
                             spot.level = 2;
-                            currentPlayer->points += 1;
-                            turnState = idle;
+
+                            if (!buildingPlaced)
+                            {
+                                auto &building = spot.rect;
+                                building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
+                                payForProduct(chosenProduct);
+                                currentPlayer->points += 1;
+                                turnState = idle;
+                                buildingPlaced = true;
+                            }
                         }
                     }
                 }
@@ -556,28 +570,32 @@ public:
                     for (auto &spot : tile.edges)
                     {
                         auto spotCircle = spot.circle;
-                        if (spotCircle.getGlobalBounds().contains(mousePos))
+                        if (spotCircle.getGlobalBounds().contains(mousePos) && spot.isBuilt == false)
                         {
-                            sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
-
-                            building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 4 / 2));
-                            building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
-                            building.setTexture(&buildingsTextures);
-                            building.setTextureRect(sf::IntRect(this->textureSize * 2, 3 * this->textureSize / 4, this->textureSize, this->textureSize / 4));
-                            building.setFillColor(currentPlayer->color);
-                            building.setRotation(30 + 60 * (i % 3));
-                            spot.rect = building;
-
-                            payForProduct(chosenProduct);
                             spot.isBuilt = true;
                             spot.owner = *currentPlayer;
-                            turnState = idle;
+
+                            if (!buildingPlaced)
+                            {
+                                sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
+                                building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 4 / 2));
+                                building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
+                                building.setTexture(&buildingsTextures);
+                                building.setTextureRect(sf::IntRect(this->textureSize * 2, 3 * this->textureSize / 4, this->textureSize, this->textureSize / 4));
+                                building.setFillColor(currentPlayer->color);
+                                building.setRotation(30 + 60 * (i % 3));
+                                spot.rect = building;
+                                payForProduct(chosenProduct);
+                                turnState = idle;
+                                buildingPlaced = true;
+                            }
                         }
                         i++;
                     }
                 }
             }
         }
+        buildingPlaced = false;
     }
     sf::Text centerText(std::string txt)
     {
@@ -612,8 +630,8 @@ public:
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
                         auto shift = getVertexShift(i);
                         sf::Vector2f position(
-                            bgTileWidth / 2 + tile.x * bgTileWidth + ((tile.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
-                            bgTileHeight / 2 + tile.y * (3 * (bgTileHeight / 4)) + shift.y);
+                            bgTileWidth / 2 + tile.position.x * bgTileWidth + ((tile.position.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
+                            bgTileHeight / 2 + tile.position.y * (3 * (bgTileHeight / 4)) + shift.y);
                         spot->setPosition(position);
 
                         spot = &tile.edges[i].circle;
@@ -624,8 +642,8 @@ public:
                         spot->setOrigin(sf::Vector2f(spotSize, spotSize));
                         shift = getEdgeShift(i);
                         position = sf::Vector2f(
-                            bgTileWidth / 2 + tile.x * bgTileWidth + ((tile.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
-                            bgTileHeight / 2 + tile.y * (3 * (bgTileHeight / 4)) + shift.y);
+                            bgTileWidth / 2 + tile.position.x * bgTileWidth + ((tile.position.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
+                            bgTileHeight / 2 + tile.position.y * (3 * (bgTileHeight / 4)) + shift.y);
                         spot->setPosition(position);
                     }
                 }
@@ -640,25 +658,23 @@ public:
 
     void debug()
     {
-        sf::Text text("", font);
+        sf::Vector2f pos(0, 0);
+
+        pos = printDebugLine("Map name: " + map.name, pos);
+        pos = printDebugLine("Game State: " + std::to_string(gameState), pos);
+        pos = printDebugLine("Turn State: " + std::to_string(turnState), pos);
+    }
+    sf::Vector2f printDebugLine(std::string txt, sf::Vector2f pos)
+    {
+        sf::Text text(txt, font);
         text.setFillColor(sf::Color::White);
         text.setOutlineColor(sf::Color::Black);
         text.setOutlineThickness(1);
         text.setStyle(sf::Text::Bold);
-
-        sf::Vector2f pos(0, 0);
-        text.setString("Map name: " + map.name);
-        window->draw(text);
-
-        pos.y += text.getCharacterSize();
         text.setPosition(pos);
-        text.setString("Game State: " + std::to_string(gameState));
         window->draw(text);
-
         pos.y += text.getCharacterSize();
-        text.setPosition(pos);
-        text.setString("Turn State: " + std::to_string(turnState));
-        window->draw(text);
+        return pos;
     }
 };
 
