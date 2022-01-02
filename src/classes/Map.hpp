@@ -2,6 +2,7 @@
 #define Map_H
 
 #include "Tile.hpp"
+#include "Building.hpp"
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -16,9 +17,11 @@ class Map
 public:
     std::string name;
     size_t width, height;
-    std::vector<std::pair<int, int>> typeDistribution = {};
-    std::vector<std::pair<int, int>> numberDistribution = {};
+    std::vector<std::pair<int, int>> typeDistribution;
+    std::vector<std::pair<int, int>> numberDistribution;
     std::vector<std::vector<Tile>> tileMap;
+    std::vector<std::vector<Building>> verticesMap;
+    std::vector<std::vector<Building>> edgesMap;
 
     void loadFromFile(std::string mapName)
     {
@@ -26,6 +29,9 @@ public:
         std::string filePath = "../assets/maps/" + mapName + ".txt";
         this->typeDistribution.clear();
         this->numberDistribution.clear();
+        this->tileMap.clear();
+        this->verticesMap.clear();
+        this->edgesMap.clear();
 
         std::ifstream file(filePath);
         if (file.is_open())
@@ -84,6 +90,15 @@ public:
                 y++;
             }
             file.close();
+
+            verticesMap.resize(2*width + 1);
+            for (size_t i = 0; i < verticesMap.size(); i += 1)
+                verticesMap[i].resize(height + 1);
+
+            edgesMap.resize(2*width);
+            for (size_t i = 0; i < edgesMap.size(); i += 1)
+                edgesMap[i].resize(2*height + 1);
+
         }
     }
     std::vector<std::string> splitWords(std::string line)
