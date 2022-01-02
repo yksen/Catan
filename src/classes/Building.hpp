@@ -6,29 +6,14 @@
 class Building
 {
 public:
-    Player owner;
+    sf::Vector2i position;
+    Player* owner;
     bool isBuilt = false;
     sf::RectangleShape rect;
     sf::CircleShape circle;
+    int level = 1;
 
     Building()
-    {
-    }
-};
-
-class City : public Building
-{
-public:
-    int level = 1;
-    City()
-    {
-    }
-};
-
-class Road : public Building
-{
-public:
-    Road()
     {
     }
 };
