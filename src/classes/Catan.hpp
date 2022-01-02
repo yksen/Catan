@@ -81,7 +81,8 @@ public:
     Product chosenProduct;
 
     bool debugingEnabled = false;
-    bool buildingPlaced = false;
+
+    std::vector<Building *> availableSpots;
 
     Catan(sf::RenderWindow *a, sf::Vector2u b)
         : window(a),
@@ -281,7 +282,7 @@ public:
         drawTiles();
         drawNumbers();
         drawBuildings();
-        drawBuildingSpots(chosenProduct);
+        drawBuildingSpots();
     }
     void drawTiles()
     {
@@ -353,60 +354,21 @@ public:
     }
     void drawBuildings()
     {
-        for (auto tileRow : map.tileMap)
-        {
-            for (auto tile : tileRow)
-            {
-                for (auto building : tile.edges)
-                    if (building.isBuilt)
-                        window->draw(building.rect);                
-            }
-        }
-        for (auto tileRow : map.tileMap)
-        {
-            for (auto tile : tileRow)
-            {
-                for (auto building : tile.vertices)
-                    if (building.isBuilt)
-                        window->draw(building.rect);               
-            }
-        }
+        for (auto row : map.verticesMap)
+            for (auto building : row)
+                if (building.isBuilt)
+                    window->draw(building.rect);
+
+        for (auto row : map.edgesMap)
+            for (auto building : row)
+                if (building.isBuilt)
+                    window->draw(building.rect);
     }
-    void drawBuildingSpots(Product type)
+    void drawBuildingSpots()
     {
         if (turnState == build)
-        {
-            for (auto tileRow : map.tileMap)
-            {
-                for (auto tile : tileRow)
-                {
-                    if (type == settlement)
-                    {
-                        for (auto building : tile.vertices)
-                        {
-                            if (!building.isBuilt)
-                                this->window->draw(building.circle);
-                        }
-                    }
-                    if (type == city)
-                    {
-                        for (auto building : tile.vertices)
-                        {
-                            if (building.isBuilt && building.level == 1 && building.owner.id == currentPlayer->id)
-                                this->window->draw(building.circle);
-                        }
-                    }
-                    if (type == road)
-                    {
-                        for (auto building : tile.edges)
-                        {
-                            if (!building.isBuilt)
-                                this->window->draw(building.circle);
-                        }
-                    }
-                }
-            }
-        }
+            for (auto spot : availableSpots)
+                window->draw(spot->circle);
     }
 
     void endTurn()
@@ -430,6 +392,7 @@ public:
     void chooseProduct(Product type)
     {
         chosenProduct = type;
+        generateBuildingSpots(chosenProduct);
         if (canBuy(chosenProduct))
             turnState = build;
     }
@@ -442,56 +405,6 @@ public:
         }
         currentPlayer->buildings[chosenProduct] -= 1;
     }
-    sf::Vector2f getVertexShift(int n)
-    {
-        switch (n)
-        {
-        case 0:
-            return sf::Vector2f(0, -bgTileHeight / 2);
-            break;
-        case 1:
-            return sf::Vector2f(bgTileWidth / 2, -bgTileHeight / 4);
-            break;
-        case 2:
-            return sf::Vector2f(bgTileWidth / 2, bgTileHeight / 4);
-            break;
-        case 3:
-            return sf::Vector2f(0, bgTileHeight / 2);
-            break;
-        case 4:
-            return sf::Vector2f(-bgTileWidth / 2, bgTileHeight / 4);
-            break;
-        case 5:
-            return sf::Vector2f(-bgTileWidth / 2, -bgTileHeight / 4);
-            break;
-        }
-        return sf::Vector2f(0, 0);
-    }
-    sf::Vector2f getEdgeShift(int n)
-    {
-        switch (n)
-        {
-        case 0:
-            return sf::Vector2f(bgTileWidth / 4, -1.5 * bgTileHeight / 4);
-            break;
-        case 1:
-            return sf::Vector2f(bgTileWidth / 2, 0);
-            break;
-        case 2:
-            return sf::Vector2f(bgTileWidth / 4, 1.5 * bgTileHeight / 4);
-            break;
-        case 3:
-            return sf::Vector2f(-bgTileWidth / 4, 1.5 * bgTileHeight / 4);
-            break;
-        case 4:
-            return sf::Vector2f(-bgTileWidth / 2, 0);
-            break;
-        case 5:
-            return sf::Vector2f(-bgTileWidth / 4, -1.5 * bgTileHeight / 4);
-            break;
-        }
-        return sf::Vector2f(0, 0);
-    }
     void nextGameState()
     {
         this->gameState = GameState((this->gameState + 1) % 4);
@@ -499,7 +412,6 @@ public:
     void setMap(std::string mapName)
     {
         map.loadFromFile(mapName);
-        generateBuildingSpots();
     }
     void rollTheDice()
     {
@@ -512,90 +424,47 @@ public:
     }
     void placeBuilding(Product type, sf::Vector2f mousePos)
     {
-        for (auto &tileRow : map.tileMap)
+        for (auto spot : availableSpots)
         {
-            for (auto &tile : tileRow)
+            if (spot->circle.getGlobalBounds().contains(mousePos))
             {
                 if (type == settlement)
                 {
-                    for (auto &spot : tile.vertices)
-                    {
-                        auto spotCircle = spot.circle;
-                        if (spotCircle.getGlobalBounds().contains(mousePos) && spot.isBuilt == false)
-                        {
-                            spot.isBuilt = true;
-                            spot.owner = *currentPlayer;
-
-                            if (!buildingPlaced)
-                            {
-                                sf::RectangleShape building(sf::Vector2f(buildingSize, buildingSize));
-                                building.setOrigin(sf::Vector2f(buildingSize / 2, buildingSize / 2));
-                                building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
-                                building.setTexture(&buildingsTextures);
-                                building.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
-                                building.setFillColor(currentPlayer->color);
-                                spot.rect = building;
-                                payForProduct(chosenProduct);
-                                currentPlayer->points += 1;
-                                turnState = idle;
-                                buildingPlaced = true;
-                            }
-                        }
-                    }
+                    spot->isBuilt = true;
+                    spot->owner = &(*currentPlayer);
+                    sf::RectangleShape building(sf::Vector2f(buildingSize, buildingSize));
+                    building.setOrigin(sf::Vector2f(buildingSize / 2, buildingSize / 2));
+                    building.setPosition(spot->circle.getGlobalBounds().left + spot->circle.getGlobalBounds().width / 2, spot->circle.getGlobalBounds().top + spot->circle.getGlobalBounds().height / 2);
+                    building.setTexture(&buildingsTextures);
+                    building.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
+                    building.setFillColor(currentPlayer->color);
+                    spot->rect = building;
+                    currentPlayer->points += 1;
                 }
                 if (type == city)
                 {
-                    for (auto &spot : tile.vertices)
-                    {
-                        auto spotCircle = spot.circle;
-                        if (spotCircle.getGlobalBounds().contains(mousePos) && spot.level == 1 && spot.owner.id == currentPlayer->id)
-                        {
-                            spot.level = 2;
-
-                            if (!buildingPlaced)
-                            {
-                                auto &building = spot.rect;
-                                building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
-                                payForProduct(chosenProduct);
-                                currentPlayer->points += 1;
-                                turnState = idle;
-                                buildingPlaced = true;
-                            }
-                        }
-                    }
+                    spot->level = 2;
+                    auto &building = spot->rect;
+                    building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
+                    currentPlayer->points += 1;
                 }
                 if (type == road)
                 {
-                    int i = 0;
-                    for (auto &spot : tile.edges)
-                    {
-                        auto spotCircle = spot.circle;
-                        if (spotCircle.getGlobalBounds().contains(mousePos) && spot.isBuilt == false)
-                        {
-                            spot.isBuilt = true;
-                            spot.owner = *currentPlayer;
-
-                            if (!buildingPlaced)
-                            {
-                                sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
-                                building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 4 / 2));
-                                building.setPosition(spotCircle.getGlobalBounds().left + spotCircle.getGlobalBounds().width / 2, spotCircle.getGlobalBounds().top + spotCircle.getGlobalBounds().height / 2);
-                                building.setTexture(&buildingsTextures);
-                                building.setTextureRect(sf::IntRect(this->textureSize * 2, 3 * this->textureSize / 4, this->textureSize, this->textureSize / 4));
-                                building.setFillColor(currentPlayer->color);
-                                building.setRotation(30 + 60 * (i % 3));
-                                spot.rect = building;
-                                payForProduct(chosenProduct);
-                                turnState = idle;
-                                buildingPlaced = true;
-                            }
-                        }
-                        i++;
-                    }
+                    spot->isBuilt = true;
+                    spot->owner = &(*currentPlayer);
+                    sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
+                    building.setOrigin(sf::Vector2f(this->buildingSize / 2, this->buildingSize / 4 / 2));
+                    building.setPosition(spot->circle.getGlobalBounds().left + spot->circle.getGlobalBounds().width / 2, spot->circle.getGlobalBounds().top + spot->circle.getGlobalBounds().height / 2);
+                    building.setTexture(&buildingsTextures);
+                    building.setTextureRect(sf::IntRect(textureSize * 2, 3 * textureSize / 4, textureSize, textureSize / 4));
+                    building.setFillColor(currentPlayer->color);
+                    building.setRotation((spot->position.y % 2) * 90 + !(spot->position.y % 2) * (-30 + (spot->position.x % 2) * 60) * (!(spot->position.y % 4 == 0) * 2 - 1));
+                    spot->rect = building;
                 }
+                payForProduct(chosenProduct);
+                turnState = idle;
             }
         }
-        buildingPlaced = false;
     }
     sf::Text centerText(std::string txt)
     {
@@ -612,43 +481,50 @@ public:
 
         return text;
     }
-    void generateBuildingSpots()
+    void generateBuildingSpots(Product type)
     {
-        for (auto &tileRow : map.tileMap)
-        {
-            for (auto &tile : tileRow)
-            {
-                if (tile.isLand())
+        availableSpots.clear();
+        if (type == settlement || type == city)
+            for (size_t x = 0; x < map.verticesMap.size(); x += 1)
+                for (size_t y = 0; y < map.verticesMap[x].size(); y += 1)
                 {
-                    for (size_t i = 0; i < 6; i++)
-                    {
-                        sf::CircleShape *spot = &tile.vertices[i].circle;
-                        spot->setRadius(spotSize);
-                        spot->setFillColor(spotColor);
-                        spot->setOutlineColor(sf::Color::Black);
-                        spot->setOutlineThickness(spotSize / 10);
-                        spot->setOrigin(sf::Vector2f(spotSize, spotSize));
-                        auto shift = getVertexShift(i);
-                        sf::Vector2f position(
-                            bgTileWidth / 2 + tile.position.x * bgTileWidth + ((tile.position.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
-                            bgTileHeight / 2 + tile.position.y * (3 * (bgTileHeight / 4)) + shift.y);
-                        spot->setPosition(position);
+                    Building *spot = &map.verticesMap[x][y];
+                    sf::CircleShape *circle = &spot->circle;
+                    circle->setRadius(spotSize);
+                    circle->setFillColor(spotColor);
+                    circle->setOutlineColor(sf::Color::Black);
+                    circle->setOutlineThickness(spotSize / 10);
+                    circle->setOrigin(sf::Vector2f(spotSize, spotSize));
+                    sf::Vector2f position(
+                        x * bgTileWidth / 2,
+                        y * bgTileHeight * 3 / 4 + ((x % 2 + y % 2) % 2) * bgTileHeight / 4);
+                    circle->setPosition(position);
 
-                        spot = &tile.edges[i].circle;
-                        spot->setRadius(spotSize);
-                        spot->setFillColor(spotColor);
-                        spot->setOutlineColor(sf::Color::Black);
-                        spot->setOutlineThickness(spotSize / 10);
-                        spot->setOrigin(sf::Vector2f(spotSize, spotSize));
-                        shift = getEdgeShift(i);
-                        position = sf::Vector2f(
-                            bgTileWidth / 2 + tile.position.x * bgTileWidth + ((tile.position.y + 1) % 2) * (bgTileWidth / 2) + shift.x,
-                            bgTileHeight / 2 + tile.position.y * (3 * (bgTileHeight / 4)) + shift.y);
-                        spot->setPosition(position);
-                    }
+                    if (type == settlement && !spot->isBuilt)
+                        availableSpots.push_back(spot);
+                    if (type == city && spot->isBuilt && spot->level == 1 && spot->owner->id == currentPlayer->id)
+                        availableSpots.push_back(spot);
                 }
-            }
-        }
+        if (type == road)
+            for (size_t x = 0; x < map.edgesMap.size(); x += 1)
+                for (size_t y = 0; y < map.edgesMap[x].size(); y += 1)
+                {
+                    Building *spot = &map.edgesMap[x][y];
+                    spot->position = sf::Vector2i(x, y);
+                    sf::CircleShape *circle = &spot->circle;
+                    circle->setRadius(spotSize);
+                    circle->setFillColor(spotColor);
+                    circle->setOutlineColor(sf::Color::Black);
+                    circle->setOutlineThickness(spotSize / 10);
+                    circle->setOrigin(sf::Vector2f(spotSize, spotSize));
+                    sf::Vector2f position(
+                        x * bgTileWidth / ((!(y % 2) + 1)) + !(y % 2) * bgTileWidth / 4 + (y % 4 == 1) * (y % 2) * bgTileWidth / 2,
+                        y * bgTileHeight * 3 / 8 + bgTileHeight / 8);
+                    circle->setPosition(position);
+
+                    if (!spot->isBuilt)
+                        availableSpots.push_back(spot);
+                }
     }
     void processMouseClick(sf::Vector2f mousePos)
     {
@@ -659,12 +535,11 @@ public:
     void debug()
     {
         sf::Vector2f pos(0, 0);
-
-        pos = printDebugLine("Map name: " + map.name, pos);
-        pos = printDebugLine("Game State: " + std::to_string(gameState), pos);
-        pos = printDebugLine("Turn State: " + std::to_string(turnState), pos);
+        pos = printAndMoveDebugLine("Map name: " + map.name, pos);
+        pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
+        pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
     }
-    sf::Vector2f printDebugLine(std::string txt, sf::Vector2f pos)
+    sf::Vector2f printAndMoveDebugLine(std::string txt, sf::Vector2f pos)
     {
         sf::Text text(txt, font);
         text.setFillColor(sf::Color::White);
