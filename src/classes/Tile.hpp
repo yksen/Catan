@@ -23,16 +23,12 @@ public:
     sf::Vector2i position;
     TileType type;
     int number;
-    std::vector<City> vertices;
-    std::vector<Road> edges;
 
     Tile(int a = 0, int b = 0, TileType c = none, int d = 0)
         : position(a, b),
           type(c),
           number(d)
     {
-        this->vertices.resize(6);
-        this->edges.resize(6);
     }
 
     bool isLand()
