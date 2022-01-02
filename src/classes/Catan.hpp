@@ -354,12 +354,12 @@ public:
     }
     void drawBuildings()
     {
-        for (auto row : map.verticesMap)
+        for (auto row : map.edgesMap)
             for (auto building : row)
                 if (building.isBuilt)
                     window->draw(building.rect);
 
-        for (auto row : map.edgesMap)
+        for (auto row : map.verticesMap)
             for (auto building : row)
                 if (building.isBuilt)
                     window->draw(building.rect);
