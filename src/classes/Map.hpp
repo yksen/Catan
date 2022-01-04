@@ -93,11 +93,11 @@ public:
 
             verticesMap.resize(2*width + 1);
             for (size_t i = 0; i < verticesMap.size(); i += 1)
-                verticesMap[i].resize(height + 1);
+                verticesMap[i].resize(height + 1, Building(settlement));
 
             edgesMap.resize(2*width);
             for (size_t i = 0; i < edgesMap.size(); i += 1)
-                edgesMap[i].resize(2*height + 1);
+                edgesMap[i].resize(2*height + 1, Building(road));
 
         }
     }
