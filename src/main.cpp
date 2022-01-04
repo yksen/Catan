@@ -36,6 +36,8 @@ int main()
                 game.chooseProduct(road);
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::F3)
                 game.debugingEnabled = !game.debugingEnabled;
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LAlt)
+                game.test = ++game.test%4;
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
                 game.processMouseClick(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
         }
