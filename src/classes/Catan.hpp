@@ -539,15 +539,22 @@ public:
     std::vector<Tile> getAdjacentTiles(Building spot)
     {
         std::vector<Tile> adjacentTiles;
+        auto pos = spot.position;
         if (spot.type == settlement || spot.type == city)
         {
-            auto pos = spot.position;
             adjacentTiles.push_back(
                 map.tileMap[std::floor(pos.x / 2)][pos.y - !((pos.x + pos.y)%2)]);
             adjacentTiles.push_back(
                 map.tileMap[std::floor(pos.x / 2) - 1][pos.y - !((pos.x + pos.y)%2)]);
             adjacentTiles.push_back(
                 map.tileMap[std::floor(pos.x / 2) - !(pos.x%2)][pos.y - ((pos.x + pos.y)%2)]);
+        }
+        if (spot.type == road)
+        {
+            adjacentTiles.push_back(
+                map.tileMap[(pos.y%2)*pos.x + !(pos.x%2)*std::floor((pos.y-1)/2)][(pos.y%2) * std::floor(pos.y / 2) + !(pos.y%2) * pos.y/2]);
+            adjacentTiles.push_back(
+                map.tileMap[(pos.y%2)*(pos.x-1) + !(pos.x%2)*std::floor(pos.y/2)][(pos.y%2) * std::floor(pos.y / 2) + !(pos.y%2) * (pos.y/2 - 1)]);
         }
         return adjacentTiles;
     }
@@ -565,7 +572,7 @@ public:
         // pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
         // pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
         std::vector<sf::Vector2i> testPos = {sf::Vector2i(5, 3), sf::Vector2i(6, 3), sf::Vector2i(7, 2), sf::Vector2i(6, 2)};
-        std::vector<Tile> testTiles = getAdjacentTiles(map.verticesMap[testPos[test].x][testPos[test].y]);
+        std::vector<Tile> testTiles = getAdjacentTiles(map.edgesMap[testPos[test].x][testPos[test].y]);
         for (auto tileRow : map.tileMap)
             for (auto tile : tileRow)
             {
