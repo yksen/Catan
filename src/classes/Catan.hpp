@@ -7,6 +7,7 @@
 #include <vector>
 #include <random>
 #include <string>
+#include <cmath>
 
 enum GameState
 {
@@ -290,8 +291,8 @@ public:
         {
             for (size_t x = 0; x < map.width; x++)
             {
-                Tile tile = map.tileMap[x][y];
-                if (tile.type != none)
+                Tile *tile = &map.tileMap[x][y];
+                if (tile->type != none)
                 {
                     sf::CircleShape bgTileShape(bgTileSize, 6);
                     sf::CircleShape tileShape(tileSize, 6);
@@ -299,20 +300,23 @@ public:
                     bgTileShape.setOrigin(bgTileSize, bgTileSize);
                     tileShape.setOrigin(tileSize, tileSize);
 
-                    sf::Vector2f position(bgTileWidth / 2 + x * bgTileWidth + ((y + 1) % 2) * (bgTileWidth / 2), bgTileHeight / 2 + y * (3 * (bgTileHeight / 4)));
+                    sf::Vector2f position(
+                        bgTileWidth / 2 + x * bgTileWidth + ((y + 1) % 2) * (bgTileWidth / 2),
+                        bgTileHeight / 2 + y * (3 * (bgTileHeight / 4)));
+                    tile->windowPosition = position;
                     bgTileShape.setPosition(position);
                     tileShape.setPosition(position);
 
-                    if (tile.type == ocean)
+                    if (tile->type == ocean)
                         bgTileShape.setFillColor(sf::Color(0, 157, 174));
                     else
                         bgTileShape.setFillColor(sf::Color::White);
 
                     tileShape.setTexture(&tileTextures);
-                    tileShape.setTextureRect(sf::IntRect(((tile.type - 1) % 4) * textureSize, (((tile.type - 1) / 4) % 4) * textureSize, textureSize, textureSize));
+                    tileShape.setTextureRect(sf::IntRect(((tile->type - 1) % 4) * textureSize, (((tile->type - 1) / 4) % 4) * textureSize, textureSize, textureSize));
 
-                    this->window->draw(bgTileShape);
-                    this->window->draw(tileShape);
+                    window->draw(bgTileShape);
+                    window->draw(tileShape);
                 }
             }
         }
@@ -407,7 +411,7 @@ public:
     }
     void nextGameState()
     {
-        this->gameState = GameState((this->gameState + 1) % 4);
+        gameState = GameState((gameState + 1) % 4);
     }
     void setMap(std::string mapName)
     {
@@ -430,6 +434,7 @@ public:
             {
                 if (type == settlement)
                 {
+                    spot->type = type;
                     spot->isBuilt = true;
                     spot->owner = &(*currentPlayer);
                     sf::RectangleShape building(sf::Vector2f(buildingSize, buildingSize));
@@ -443,6 +448,7 @@ public:
                 }
                 if (type == city)
                 {
+                    spot->type = type;
                     spot->level = 2;
                     auto &building = spot->rect;
                     building.setTextureRect(sf::IntRect(textureSize, 0, textureSize, textureSize));
@@ -450,6 +456,7 @@ public:
                 }
                 if (type == road)
                 {
+                    spot->type = type;
                     spot->isBuilt = true;
                     spot->owner = &(*currentPlayer);
                     sf::RectangleShape building(sf::Vector2f(this->buildingSize, this->buildingSize / 4));
@@ -468,7 +475,7 @@ public:
     }
     sf::Text centerText(std::string txt)
     {
-        auto size = this->windowSize;
+        auto size = windowSize;
         sf::Text text(txt, font);
 
         text.setFillColor(sf::Color::White);
@@ -489,6 +496,7 @@ public:
                 for (size_t y = 0; y < map.verticesMap[x].size(); y += 1)
                 {
                     Building *spot = &map.verticesMap[x][y];
+                    spot->position = sf::Vector2i(x, y);
                     sf::CircleShape *circle = &spot->circle;
                     circle->setRadius(spotSize);
                     circle->setFillColor(spotColor);
@@ -498,6 +506,7 @@ public:
                     sf::Vector2f position(
                         x * bgTileWidth / 2,
                         y * bgTileHeight * 3 / 4 + ((x % 2 + y % 2) % 2) * bgTileHeight / 4);
+                    spot->windowPosition = position;
                     circle->setPosition(position);
 
                     if (type == settlement && !spot->isBuilt)
@@ -520,11 +529,27 @@ public:
                     sf::Vector2f position(
                         x * bgTileWidth / ((!(y % 2) + 1)) + !(y % 2) * bgTileWidth / 4 + (y % 4 == 1) * (y % 2) * bgTileWidth / 2,
                         y * bgTileHeight * 3 / 8 + bgTileHeight / 8);
+                    spot->windowPosition = position;
                     circle->setPosition(position);
 
                     if (!spot->isBuilt)
                         availableSpots.push_back(spot);
                 }
+    }
+    std::vector<Tile> getAdjacentTiles(Building spot)
+    {
+        std::vector<Tile> adjacentTiles;
+        if (spot.type == settlement || spot.type == city)
+        {
+            auto pos = spot.position;
+            adjacentTiles.push_back(
+                map.tileMap[std::floor(pos.x / 2)][pos.y - !((pos.x + pos.y)%2)]);
+            adjacentTiles.push_back(
+                map.tileMap[std::floor(pos.x / 2) - 1][pos.y - !((pos.x + pos.y)%2)]);
+            adjacentTiles.push_back(
+                map.tileMap[std::floor(pos.x / 2) - !(pos.x%2)][pos.y - ((pos.x + pos.y)%2)]);
+        }
+        return adjacentTiles;
     }
     void processMouseClick(sf::Vector2f mousePos)
     {
@@ -532,12 +557,39 @@ public:
             placeBuilding(chosenProduct, mousePos);
     }
 
+    size_t test = 0;
     void debug()
     {
         sf::Vector2f pos(0, 0);
-        pos = printAndMoveDebugLine("Map name: " + map.name, pos);
-        pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
-        pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
+        // pos = printAndMoveDebugLine("Map name: " + map.name, pos);
+        // pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
+        // pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
+        std::vector<sf::Vector2i> testPos = {sf::Vector2i(5, 3), sf::Vector2i(6, 3), sf::Vector2i(7, 2), sf::Vector2i(6, 2)};
+        std::vector<Tile> testTiles = getAdjacentTiles(map.verticesMap[testPos[test].x][testPos[test].y]);
+        for (auto tileRow : map.tileMap)
+            for (auto tile : tileRow)
+            {
+                sf::Text txt(std::to_string(tile.position.x) + "," + std::to_string(tile.position.y), font);
+                txt.setCharacterSize(25);
+                txt.setOutlineThickness(1);
+                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                txt.setPosition(tile.windowPosition);
+                for (auto testTile : testTiles)
+                    if (testTile.position == tile.position)
+                        txt.setFillColor(sf::Color::Red);
+                window->draw(txt);
+            }
+        for (auto spot : availableSpots)
+        {
+            sf::Text txt(std::to_string(spot->position.x) + "," + std::to_string(spot->position.y), font);
+            txt.setCharacterSize(25);
+            txt.setOutlineThickness(1);
+            txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+            txt.setPosition(spot->windowPosition);
+            if (testPos[test] == spot->position)
+                txt.setFillColor(sf::Color::Red);
+            window->draw(txt);
+        }
     }
     sf::Vector2f printAndMoveDebugLine(std::string txt, sf::Vector2f pos)
     {
