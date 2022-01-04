@@ -21,6 +21,7 @@ class Tile
 {
 public:
     sf::Vector2i position;
+    sf::Vector2f windowPosition;
     TileType type;
     int number;
 
