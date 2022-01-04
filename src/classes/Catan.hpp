@@ -545,11 +545,11 @@ public:
         if (spot.type == settlement || spot.type == city)
         {
             adjacentTiles.push_back(
-                map.tileMap[std::floor(x / 2)][y - !((x + y) % 2)]);
+                map.tileMap[x/2][y - !((x + y) % 2)]);
             adjacentTiles.push_back(
-                map.tileMap[std::floor(x / 2) - 1][y - !((x + y) % 2)]);
+                map.tileMap[x/2 - 1][y - !((x + y) % 2)]);
             adjacentTiles.push_back(
-                map.tileMap[std::floor(x / 2) - !(x % 2)][y - ((x + y) % 2)]);
+                map.tileMap[x/2 - !(x % 2)][y - ((x + y) % 2)]);
         }
         if (spot.type == road)
         {
@@ -560,6 +560,30 @@ public:
         }
         return adjacentTiles;
     }
+    std::vector<Building> getAdjacentSpots(Building spot)
+    {
+        std::vector<Building> adjacentSpots;
+        size_t x = spot.position.x;
+        size_t y = spot.position.y;
+        if (spot.type == settlement || spot.type == city)
+        {
+            adjacentSpots.push_back(
+                map.edgesMap[x][y*2]);
+            adjacentSpots.push_back(
+                map.edgesMap[x-1][y*2]);
+            adjacentSpots.push_back(
+                map.edgesMap[x/2][(x+y)%2 ? y*2+1 : y*2-1]);
+        }
+        if (spot.type == road)
+        {
+            adjacentSpots.push_back(
+                map.verticesMap[y%2 ? y%4==1 ? x*2+1 : x*2 : x][y%2 ? y/2 : y/2]);
+            adjacentSpots.push_back(
+                map.verticesMap[y%2 ? y%4==1 ? x*2+1 : x*2 : x+1][y%2 ? y/2+1 : y/2]);
+        }
+        return adjacentSpots;
+    }
+
     void processMouseClick(sf::Vector2f mousePos)
     {
         if (turnState == build)
@@ -572,7 +596,7 @@ public:
         // pos = printAndMoveDebugLine("Map name: " + map.name, pos);
         // pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
         // pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
-        std::vector<Tile> testTiles = getAdjacentTiles(testSpot);
+        std::vector<Building> testSpots = getAdjacentSpots(testSpot);
         for (auto tileRow : map.tileMap)
             for (auto tile : tileRow)
             {
@@ -581,22 +605,34 @@ public:
                 txt.setOutlineThickness(1);
                 txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
                 txt.setPosition(tile.windowPosition);
-                for (auto testTile : testTiles)
-                    if (testTile.position == tile.position)
+                window->draw(txt);
+            }
+        for (auto spotRow : map.verticesMap)
+            for (auto spot : spotRow)
+            {
+                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+                txt.setCharacterSize(25);
+                txt.setOutlineThickness(1);
+                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                txt.setPosition(spot.windowPosition);
+                for (auto test : testSpots)
+                    if (test.position == spot.position && test.type == spot.type)
                         txt.setFillColor(sf::Color::Red);
                 window->draw(txt);
             }
-        for (auto spot : availableSpots)
-        {
-            sf::Text txt(std::to_string(spot->position.x) + "," + std::to_string(spot->position.y), font);
-            txt.setCharacterSize(25);
-            txt.setOutlineThickness(1);
-            txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-            txt.setPosition(spot->windowPosition);
-            if (testSpot.position == spot->position)
-                txt.setFillColor(sf::Color::Red);
-            window->draw(txt);
-        }
+        for (auto spotRow : map.edgesMap)
+            for (auto spot : spotRow)
+            {
+                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+                txt.setCharacterSize(25);
+                txt.setOutlineThickness(1);
+                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                txt.setPosition(spot.windowPosition);
+                for (auto test : testSpots)
+                    if (test.position == spot.position && test.type == spot.type)
+                        txt.setFillColor(sf::Color::Red);
+                window->draw(txt);
+            }
     }
     sf::Vector2f printAndMoveDebugLine(std::string txt, sf::Vector2f pos)
     {
