@@ -470,6 +470,7 @@ public:
                 }
                 payForProduct(chosenProduct);
                 turnState = idle;
+                testSpot = *spot;
             }
         }
     }
@@ -539,22 +540,23 @@ public:
     std::vector<Tile> getAdjacentTiles(Building spot)
     {
         std::vector<Tile> adjacentTiles;
-        auto pos = spot.position;
+        size_t x = spot.position.x;
+        size_t y = spot.position.y;
         if (spot.type == settlement || spot.type == city)
         {
             adjacentTiles.push_back(
-                map.tileMap[std::floor(pos.x / 2)][pos.y - !((pos.x + pos.y)%2)]);
+                map.tileMap[std::floor(x / 2)][y - !((x + y) % 2)]);
             adjacentTiles.push_back(
-                map.tileMap[std::floor(pos.x / 2) - 1][pos.y - !((pos.x + pos.y)%2)]);
+                map.tileMap[std::floor(x / 2) - 1][y - !((x + y) % 2)]);
             adjacentTiles.push_back(
-                map.tileMap[std::floor(pos.x / 2) - !(pos.x%2)][pos.y - ((pos.x + pos.y)%2)]);
+                map.tileMap[std::floor(x / 2) - !(x % 2)][y - ((x + y) % 2)]);
         }
         if (spot.type == road)
         {
             adjacentTiles.push_back(
-                map.tileMap[(pos.y%2)*pos.x + !(pos.x%2)*std::floor((pos.y-1)/2)][(pos.y%2) * std::floor(pos.y / 2) + !(pos.y%2) * pos.y/2]);
+                map.tileMap[y%2 ? x-1 : (x-1)/2][y%2 ? y/2 : y%4==0 ? y/2 : (y-1)/2]);
             adjacentTiles.push_back(
-                map.tileMap[(pos.y%2)*(pos.x-1) + !(pos.x%2)*std::floor(pos.y/2)][(pos.y%2) * std::floor(pos.y / 2) + !(pos.y%2) * (pos.y/2 - 1)]);
+                map.tileMap[y%2 ? x : x/2][y%2 ? y/2 : y%4==0 ? (y-1)/2 : y/2]);
         }
         return adjacentTiles;
     }
@@ -563,16 +565,14 @@ public:
         if (turnState == build)
             placeBuilding(chosenProduct, mousePos);
     }
-
-    size_t test = 0;
+    Building testSpot;
     void debug()
     {
         sf::Vector2f pos(0, 0);
         // pos = printAndMoveDebugLine("Map name: " + map.name, pos);
         // pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
         // pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
-        std::vector<sf::Vector2i> testPos = {sf::Vector2i(5, 3), sf::Vector2i(6, 3), sf::Vector2i(7, 2), sf::Vector2i(6, 2)};
-        std::vector<Tile> testTiles = getAdjacentTiles(map.edgesMap[testPos[test].x][testPos[test].y]);
+        std::vector<Tile> testTiles = getAdjacentTiles(testSpot);
         for (auto tileRow : map.tileMap)
             for (auto tile : tileRow)
             {
@@ -593,7 +593,7 @@ public:
             txt.setOutlineThickness(1);
             txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
             txt.setPosition(spot->windowPosition);
-            if (testPos[test] == spot->position)
+            if (testSpot.position == spot->position)
                 txt.setFillColor(sf::Color::Red);
             window->draw(txt);
         }
