@@ -10,7 +10,7 @@ int main()
     settings.antialiasingLevel = 8;
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Catan", sf::Style::Fullscreen, settings);
 
-    Catan game(&window, window.getSize());
+    Catan game(&window);
     game.setMap("Standard");
 
     while (window.isOpen())

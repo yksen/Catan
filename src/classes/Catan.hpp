@@ -40,7 +40,6 @@ class Catan
 {
 public:
     sf::RenderWindow *window;
-    sf::Vector2u windowSize;
 
     GameState gameState = menu;
     TurnState turnState = setup;
@@ -85,11 +84,10 @@ public:
 
     std::vector<Building *> availableSpots;
 
-    Catan(sf::RenderWindow *a, sf::Vector2u b)
+    Catan(sf::RenderWindow *a)
         : window(a),
-          windowSize(b),
-          gameStateWidth(windowSize.x / 4),
-          gameStateHeight(windowSize.y),
+          gameStateWidth(window->getSize().x / 4),
+          gameStateHeight(window->getSize().y),
           gSW(gameStateWidth / 100),
           gSH(gameStateHeight / 100)
     {
@@ -129,7 +127,7 @@ public:
     }
     void drawCenterCross()
     {
-        auto size = windowSize;
+        auto size = window->getSize();
         sf::RectangleShape xAxis(sf::Vector2f(size.x, 3));
         sf::RectangleShape yAxis(sf::Vector2f(3, size.y));
         xAxis.setFillColor(sf::Color::Red);
@@ -174,8 +172,8 @@ public:
         background.setFillColor(colorPalette[1]);
         background.setOutlineColor(sf::Color::White);
         background.setOutlineThickness(gSW);
-        sf::Vector2f backgroundPos(windowSize.x - gameStateWidth, 0);
-        sf::Vector2f backgroundCenterOffset((int)-windowSize.x + gameStateWidth / 2, -gameStateHeight / 2);
+        sf::Vector2f backgroundPos(window->getSize().x - gameStateWidth, 0);
+        sf::Vector2f backgroundCenterOffset((int)-window->getSize().x + gameStateWidth / 2, -gameStateHeight / 2);
         background.setPosition(backgroundPos);
         window->draw(background);
 
@@ -206,7 +204,7 @@ public:
         {
             auto player = players[i];
             playerBackground.setPosition(sf::Vector2f(-45 * gSW, -26 * gSH + i * (playerBackgroundSize.y + 2 * gSH)));
-            sf::Vector2f playerBackgroundOffset((int)-windowSize.x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 26 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
+            sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 26 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
             sf::Text playerName(player.name, font);
             playerName.setCharacterSize(3 * gSH);
             playerName.setFillColor(player.color);
@@ -265,7 +263,7 @@ public:
                 }
             }
 
-            sf::Vector2f backgroundBottomLeftOffset((int)-windowSize.x + gameStateWidth, -gameStateHeight);
+            sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
             for (size_t j = 0; j < 3; j++)
             {
                 sf::Vector2f buttonSize(30 * gSW, 30 * gSW);
@@ -470,13 +468,12 @@ public:
                 }
                 payForProduct(chosenProduct);
                 turnState = idle;
-                testSpot = *spot;
             }
         }
     }
     sf::Text centerText(std::string txt)
     {
-        auto size = windowSize;
+        auto size = window->getSize();
         sf::Text text(txt, font);
 
         text.setFillColor(sf::Color::White);
@@ -589,50 +586,49 @@ public:
         if (turnState == build)
             placeBuilding(chosenProduct, mousePos);
     }
-    Building testSpot;
     void debug()
     {
         sf::Vector2f pos(0, 0);
-        // pos = printAndMoveDebugLine("Map name: " + map.name, pos);
-        // pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
-        // pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
-        std::vector<Building> testSpots = getAdjacentSpots(testSpot);
-        for (auto tileRow : map.tileMap)
-            for (auto tile : tileRow)
-            {
-                sf::Text txt(std::to_string(tile.position.x) + "," + std::to_string(tile.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(tile.windowPosition);
-                window->draw(txt);
-            }
-        for (auto spotRow : map.verticesMap)
-            for (auto spot : spotRow)
-            {
-                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(spot.windowPosition);
-                for (auto test : testSpots)
-                    if (test.position == spot.position && test.type == spot.type)
-                        txt.setFillColor(sf::Color::Red);
-                window->draw(txt);
-            }
-        for (auto spotRow : map.edgesMap)
-            for (auto spot : spotRow)
-            {
-                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(spot.windowPosition);
-                for (auto test : testSpots)
-                    if (test.position == spot.position && test.type == spot.type)
-                        txt.setFillColor(sf::Color::Red);
-                window->draw(txt);
-            }
+        pos = printAndMoveDebugLine(std::to_string(window->getSize().x) + "x" + std::to_string(window->getSize().y), pos);
+        pos = printAndMoveDebugLine("Map name: " + map.name, pos);
+        pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
+        pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
+        // for (auto tileRow : map.tileMap)
+        //     for (auto tile : tileRow)
+        //     {
+        //         sf::Text txt(std::to_string(tile.position.x) + "," + std::to_string(tile.position.y), font);
+        //         txt.setCharacterSize(25);
+        //         txt.setOutlineThickness(1);
+        //         txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+        //         txt.setPosition(tile.windowPosition);
+        //         window->draw(txt);
+        //     }
+        // for (auto spotRow : map.verticesMap)
+        //     for (auto spot : spotRow)
+        //     {
+        //         sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+        //         txt.setCharacterSize(25);
+        //         txt.setOutlineThickness(1);
+        //         txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+        //         txt.setPosition(spot.windowPosition);
+        //         for (auto test : testSpots)
+        //             if (test.position == spot.position && test.type == spot.type)
+        //                 txt.setFillColor(sf::Color::Red);
+        //         window->draw(txt);
+        //     }
+        // for (auto spotRow : map.edgesMap)
+        //     for (auto spot : spotRow)
+        //     {
+        //         sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+        //         txt.setCharacterSize(25);
+        //         txt.setOutlineThickness(1);
+        //         txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+        //         txt.setPosition(spot.windowPosition);
+        //         for (auto test : testSpots)
+        //             if (test.position == spot.position && test.type == spot.type)
+        //                 txt.setFillColor(sf::Color::Red);
+        //         window->draw(txt);
+        //     }
     }
     sf::Vector2f printAndMoveDebugLine(std::string txt, sf::Vector2f pos)
     {
