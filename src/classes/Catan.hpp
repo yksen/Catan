@@ -18,7 +18,6 @@ enum GameState
 };
 enum TurnState
 {
-    setup,
     dice,
     idle,
     build,
@@ -42,7 +41,7 @@ public:
     sf::RenderWindow *window;
 
     GameState gameState = menu;
-    TurnState turnState = setup;
+    TurnState turnState = build;
     Map map;
 
     sf::Font font;
@@ -80,6 +79,8 @@ public:
 
     Product chosenProduct;
 
+    bool setupEnabled = true;
+    bool setupSecondTurn = false;
     bool debugingEnabled = false;
 
     std::vector<Building *> availableSpots;
@@ -375,8 +376,30 @@ public:
 
     void endTurn()
     {
-        turnState = (turnState == setup) ? setup : dice;
-        currentPlayer = (currentPlayer + 1 < players.end()) ? currentPlayer + 1 : players.begin();
+        if (setupEnabled)
+        {
+            if (setupSecondTurn)
+                if (currentPlayer - 1 >= players.begin())
+                    currentPlayer--;
+                else
+                {
+                    setupEnabled = false;
+                    setupSecondTurn = false;
+                    turnState = dice;
+                    return;
+                }
+            else
+                if (currentPlayer + 1 < players.end())
+                    currentPlayer++;
+                else
+                    setupSecondTurn = true;
+            chooseProduct(settlement);
+        }
+        else
+        {
+            currentPlayer = (currentPlayer + 1 < players.end()) ? currentPlayer + 1 : players.begin();
+            turnState = dice;
+        }
     }
     bool canBuy(Product type)
     {
@@ -394,16 +417,19 @@ public:
     void chooseProduct(Product type)
     {
         chosenProduct = type;
-        generateBuildingSpots(chosenProduct);
         if (canBuy(chosenProduct))
+        {
             turnState = build;
+            generateBuildingSpots(chosenProduct);
+        }
     }
     void payForProduct(Product type)
     {
-        auto cost = ProductCost[type];
-        for (auto pair : cost)
+        if (!setupEnabled)
         {
-            currentPlayer->resources[pair.first] -= pair.second;
+            auto cost = ProductCost[type];
+            for (auto pair : cost)
+                currentPlayer->resources[pair.first] -= pair.second;
         }
         currentPlayer->buildings[chosenProduct] -= 1;
     }
@@ -468,6 +494,10 @@ public:
                 }
                 payForProduct(chosenProduct);
                 turnState = idle;
+                if (setupEnabled && type == settlement)
+                    chooseProduct(road);
+                else if (setupEnabled && type == road)
+                    endTurn();
             }
         }
     }
@@ -591,8 +621,13 @@ public:
         sf::Vector2f pos(0, 0);
         pos = printAndMoveDebugLine(std::to_string(window->getSize().x) + "x" + std::to_string(window->getSize().y), pos);
         pos = printAndMoveDebugLine("Map name: " + map.name, pos);
+        pos = printAndMoveDebugLine("", pos);
         pos = printAndMoveDebugLine("Game State: " + std::to_string(gameState), pos);
         pos = printAndMoveDebugLine("Turn State: " + std::to_string(turnState), pos);
+        pos = printAndMoveDebugLine("Current player: " + std::to_string(currentPlayer->id), pos);
+        pos = printAndMoveDebugLine("", pos);
+        pos = printAndMoveDebugLine("Setup enabled: " + std::to_string(setupEnabled), pos);
+        pos = printAndMoveDebugLine("Setup second turn: " + std::to_string(setupSecondTurn), pos);
         // for (auto tileRow : map.tileMap)
         //     for (auto tile : tileRow)
         //     {
