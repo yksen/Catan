@@ -494,7 +494,9 @@ public:
                     building.setTextureRect(sf::IntRect(textureSize * 2, 3 * textureSize / 4, textureSize, textureSize / 4));
                     building.setFillColor(currentPlayer->color);
                     sf::Vector2u pos = spot->position;
-                    building.setRotation((pos.y%2) ? 90 : (pos.y%4) ? pos.x%2 ? 30 : -30 : pos.x%2 ? -30 : 30);
+                    building.setRotation((pos.y % 2) ? 90 : (pos.y % 4) ? pos.x % 2 ? 30 : -30
+                                                        : pos.x % 2     ? -30
+                                                                        : 30);
                     spot->rect = building;
                 }
                 payForProduct(chosenProduct);
@@ -574,43 +576,118 @@ public:
 
         std::vector<Building> playerCities;
         std::vector<Building> playerRoads;
-
         for (auto row : map.verticesMap)
             for (auto spot : row)
                 if (spot.isBuilt && spot.owner->id == currentPlayer->id)
                     playerCities.push_back(spot);
-
         for (auto row : map.edgesMap)
             for (auto spot : row)
                 if (spot.isBuilt && spot.owner->id == currentPlayer->id)
                     playerRoads.push_back(spot);
 
-        if (type == settlement || type == city)
+        if (type == settlement)
+        {
+            if (setupEnabled)
+                for (size_t x = 0; x < map.verticesMap.size(); x += 1)
+                    for (size_t y = 0; y < map.verticesMap[x].size(); y += 1)
+                    {
+                        Building *s = &map.verticesMap[x][y];
+                        if (s->isLand)
+                        {
+                            auto adjacentRoads = getAdjacentRoads(*s);
+                            bool canBuild = true;
+                            for (auto road2 : adjacentRoads)
+                            {
+                                auto spots = getAdjacentCities(*road2);
+                                for (auto spot : spots)
+                                {
+                                    if (spot->isBuilt)
+                                        canBuild = false;
+                                }
+                            }
+                            if (canBuild)
+                            {
+                                bool addSpot = true;
+                                for (auto x : availableSpots)
+                                    if (x->position == s->position)
+                                        addSpot = false;
+                                if (addSpot)
+                                    availableSpots.push_back(s);
+                            }
+                        }
+                    }
+            else
+            {
+                std::vector<Building *> candidateSpots;
+                for (auto road : playerRoads)
+                {
+                    auto adjacentSpots = getAdjacentCities(road);
+                    for (auto spot : adjacentSpots)
+                        if (!spot->isBuilt)
+                            candidateSpots.push_back(spot);
+                    for (auto candidateSpot : candidateSpots)
+                    {
+                        auto adjacentRoads = getAdjacentRoads(*candidateSpot);
+                        bool canBuild = true;
+                        for (auto road2 : adjacentRoads)
+                        {
+                            auto spots = getAdjacentCities(*road2);
+                            for (auto spot : spots)
+                            {
+                                if (spot->isBuilt)
+                                    canBuild = false;
+                            }
+                        }
+                        if (canBuild)
+                        {
+                            bool addSpot = true;
+                            for (auto x : availableSpots)
+                                if (x->position == candidateSpot->position)
+                                    addSpot = false;
+                            if (addSpot)
+                                availableSpots.push_back(candidateSpot);
+                        }
+                    }
+                }
+            }
+        }
+        if (type == city)
+        {
             for (size_t x = 0; x < map.verticesMap.size(); x += 1)
                 for (size_t y = 0; y < map.verticesMap[x].size(); y += 1)
                 {
                     Building *spot = &map.verticesMap[x][y];
-                    if (type == settlement && spot->isLand && !spot->isBuilt)
-                        availableSpots.push_back(spot);
-                    if (type == city && spot->isBuilt && spot->level == 1 && spot->owner->id == currentPlayer->id)
+                    if (spot->isBuilt && spot->level == 1 && spot->owner->id == currentPlayer->id)
                         availableSpots.push_back(spot);
                 }
+        }
         if (type == road)
+        {
             if (setupEnabled)
             {
-                auto spots = getAdjacentSpots(map.verticesMap[placedCityPos.x][placedCityPos.y]);
+                auto spots = getAdjacentRoads(map.verticesMap[placedCityPos.x][placedCityPos.y]);
                 for (auto spot : spots)
                     if (!spot->isBuilt && spot->isLand)
                         availableSpots.push_back(spot);
             }
             else
+            {
                 for (auto city : playerCities)
                 {
-                    auto spots = getAdjacentSpots(city);
+                    auto spots = getAdjacentRoads(city);
                     for (auto spot : spots)
                         if (!spot->isBuilt && spot->isLand)
                             availableSpots.push_back(spot);
                 }
+                for (auto road : playerRoads)
+                {
+                    auto spots = getAdjacentRoads(road);
+                    for (auto spot : spots)
+                        if (!spot->isBuilt && spot->isLand)
+                            availableSpots.push_back(spot);
+                }
+            }
+        }
     }
     bool isOffLimits(sf::Vector2u pos)
     {
@@ -685,7 +762,7 @@ public:
 
         return adjacentSpots;
     }
-    std::vector<Building *> getAdjacentSpots(Building spot)
+    std::vector<Building *> getAdjacentRoads(Building spot)
     {
         std::vector<Building *> adjacentSpots;
         size_t x = spot.position.x;
@@ -702,9 +779,38 @@ public:
         if (spot.type == road)
         {
             adjacentSpots.push_back(
-                &map.verticesMap[y % 2 ? y % 4 == 1 ? x * 2 + 1 : x * 2 : x][y % 2 ? y / 2 : y / 2]);
+                &map.edgesMap[y % 2 ? (y - 1) % 4 ? 2 * x - 1 : 2 * x + 1 : (y % 4) ? x / 2
+                                                                                    : (x + 1) / 2][y % 2 ? y - 1 : y - 1]);
             adjacentSpots.push_back(
-                &map.verticesMap[y % 2 ? y % 4 == 1 ? x * 2 + 1 : x * 2 : x + 1][y % 2 ? y / 2 + 1 : y / 2]);
+                &map.edgesMap[y % 2 ? 2 * x : x - 1][y % 2 ? y - 1 : y]);
+            adjacentSpots.push_back(
+                &map.edgesMap[y % 2 ? (y - 1) % 4 ? 2 * x - 1 : 2 * x + 1 : x + 1][y % 2 ? y + 1 : y]);
+            adjacentSpots.push_back(
+                &map.edgesMap[y % 2 ? 2 * x : (y % 4) ? (x + 1) / 2
+                                                      : x / 2][y % 2 ? y + 1 : y + 1]);
+        }
+        return adjacentSpots;
+    }
+    std::vector<Building *> getAdjacentCities(Building spot)
+    {
+        std::vector<Building *> adjacentSpots;
+        size_t x = spot.position.x;
+        size_t y = spot.position.y;
+        if (spot.type == settlement || spot.type == city)
+        {
+            adjacentSpots.push_back(
+                &map.verticesMap[x - 1][y]);
+            adjacentSpots.push_back(
+                &map.verticesMap[x + 1][y]);
+            adjacentSpots.push_back(
+                &map.verticesMap[x][(x + y) % 2 ? y + 1 : y - 1]);
+        }
+        if (spot.type == road)
+        {
+            adjacentSpots.push_back(
+                &map.verticesMap[y % 2 ? (y - 1) % 4 ? 2 * x : 2 * x + 1 : x][y % 2 ? y / 2 : y / 2]);
+            adjacentSpots.push_back(
+                &map.verticesMap[y % 2 ? (y - 1) % 4 ? 2 * x : 2 * x + 1 : x + 1][y % 2 ? y / 2 + 1 : y / 2]);
         }
         return adjacentSpots;
     }
