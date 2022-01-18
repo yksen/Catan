@@ -34,10 +34,10 @@ public:
 
     bool isLand()
     {
-        if (type != none && type != ocean)
-            return true;
-        else
+        if (type == none || type == ocean)
             return false;
+        else
+            return true;
     }
 };
 

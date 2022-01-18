@@ -6,7 +6,7 @@
 class Building
 {
 public:
-    sf::Vector2i position;
+    sf::Vector2u position;
     sf::Vector2f windowPosition;
     Product type;
     Player *owner;
@@ -14,7 +14,7 @@ public:
     sf::CircleShape circle;
     int level = 1;
     bool isBuilt = false;
-    bool isLand;
+    bool isLand = false;
 
     Building(Product a)
         : type(a)
