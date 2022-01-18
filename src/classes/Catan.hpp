@@ -677,14 +677,28 @@ public:
                     auto spots = getAdjacentRoads(city);
                     for (auto spot : spots)
                         if (!spot->isBuilt && spot->isLand)
-                            availableSpots.push_back(spot);
+                        {
+                            bool addSpot = true;
+                                for (auto x : availableSpots)
+                                    if (x->position == spot->position)
+                                        addSpot = false;
+                                if (addSpot)
+                                    availableSpots.push_back(spot);
+                        }
                 }
                 for (auto road : playerRoads)
                 {
                     auto spots = getAdjacentRoads(road);
                     for (auto spot : spots)
                         if (!spot->isBuilt && spot->isLand)
-                            availableSpots.push_back(spot);
+                        {
+                            bool addSpot = true;
+                                for (auto x : availableSpots)
+                                    if (x->position == spot->position)
+                                        addSpot = false;
+                                if (addSpot)
+                                    availableSpots.push_back(spot);
+                        }
                 }
             }
         }
