@@ -253,8 +253,8 @@ public:
                 resourceRect.setPosition(sf::Vector2f(6 * gSW + (3 + j) * (3 * gSH + gSW), 9 * gSH));
                 window->draw(resourceRect);
 
-                if (currentPlayer == players.begin() + i)
-                {
+                // if (currentPlayer == players.begin() + i)
+                // {
                     sf::Text amountText(std::to_string(player.resources.at(Resource(j))), font);
                     amountText.setCharacterSize(3 * gSH);
                     amountText.setOutlineThickness(1);
@@ -262,7 +262,7 @@ public:
                     auto textRect = amountText.getLocalBounds();
                     amountText.setPosition(sf::Vector2f(6 * gSW + (3 + j) * (3 * gSH + gSW) + 1.5 * gSH - textRect.width / 2, 5 * gSH));
                     window->draw(amountText);
-                }
+                // }
             }
 
             sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
@@ -375,6 +375,25 @@ public:
                 window->draw(spot->circle);
     }
 
+    void gatherResourcers()
+    {
+        int diceSum = diceRolls[0] + diceRolls[1];
+        for (auto tileRow : map.tileMap)
+            for (auto tile : tileRow)
+            {
+                if (setupEnabled || tile.number == diceSum)
+                {
+                    auto adjacentSpots = getAdjacentSpots(tile);
+                    for (auto spot : adjacentSpots)
+                    {
+                        if (spot->isBuilt && spot->type != road && tile.type != none && tile.type != ocean && tile.type != desert)
+                        {
+                            spot->owner->resources[TileProduct[tile.type]] += spot->level;
+                        }
+                    }
+                }
+            }
+    }
     void endTurn()
     {
         if (setupEnabled)
@@ -384,6 +403,7 @@ public:
                     currentPlayer--;
                 else
                 {
+                    gatherResourcers();
                     setupEnabled = false;
                     setupSecondTurn = false;
                     turnState = dice;
@@ -417,7 +437,7 @@ public:
     void chooseProduct(Product type)
     {
         chosenProduct = type;
-        if (canBuy(chosenProduct))
+        if (canBuy(chosenProduct) || setupEnabled)
         {
             turnState = build;
             getAvailableSpots(chosenProduct);
@@ -446,12 +466,10 @@ public:
     }
     void rollTheDice()
     {
-        if (turnState == dice)
-        {
-            std::uniform_int_distribution<std::mt19937::result_type> diceDist(1, 6);
-            std::vector<std::mt19937::result_type> diceRolls = {diceDist(rng), diceDist(rng)};
-            this->diceRolls = diceRolls;
-        }
+        std::uniform_int_distribution<std::mt19937::result_type> diceDist(1, 6);
+        std::vector<std::mt19937::result_type> diceRolls = {diceDist(rng), diceDist(rng)};
+        this->diceRolls = diceRolls;
+        gatherResourcers();
     }
     void placeBuilding(Product type, sf::Vector2f mousePos)
     {
@@ -679,11 +697,11 @@ public:
                         if (!spot->isBuilt && spot->isLand)
                         {
                             bool addSpot = true;
-                                for (auto x : availableSpots)
-                                    if (x->position == spot->position)
-                                        addSpot = false;
-                                if (addSpot)
-                                    availableSpots.push_back(spot);
+                            for (auto x : availableSpots)
+                                if (x->position == spot->position)
+                                    addSpot = false;
+                            if (addSpot)
+                                availableSpots.push_back(spot);
                         }
                 }
                 for (auto road : playerRoads)
@@ -693,11 +711,11 @@ public:
                         if (!spot->isBuilt && spot->isLand)
                         {
                             bool addSpot = true;
-                                for (auto x : availableSpots)
-                                    if (x->position == spot->position)
-                                        addSpot = false;
-                                if (addSpot)
-                                    availableSpots.push_back(spot);
+                            for (auto x : availableSpots)
+                                if (x->position == spot->position)
+                                    addSpot = false;
+                            if (addSpot)
+                                availableSpots.push_back(spot);
                         }
                 }
             }
@@ -705,17 +723,15 @@ public:
     }
     bool isOffLimits(sf::Vector2u pos)
     {
-        if (pos.x < 0 || pos.x > map.width - 1)
-            return true;
-        if (pos.y < 0 || pos.y > map.height - 1)
+        if (pos.x < 0 || pos.x > map.width - 1 || pos.y < 0 || pos.y > map.height - 1)
             return true;
         return false;
     }
     std::vector<Tile *> getAdjacentTiles(Building spot)
     {
         std::vector<Tile *> adjacentTiles;
-        unsigned int x = spot.position.x;
-        unsigned int y = spot.position.y;
+        size_t x = spot.position.x;
+        size_t y = spot.position.y;
         sf::Vector2u pos;
         if (spot.type == settlement || spot.type == city)
         {
@@ -747,7 +763,7 @@ public:
         std::vector<Building *> adjacentSpots;
         size_t x = tile.position.x;
         size_t y = tile.position.y;
-
+        
         adjacentSpots.push_back(
             &map.verticesMap[y % 2 ? 2 * x : 2 * x + 1][y]);
         adjacentSpots.push_back(

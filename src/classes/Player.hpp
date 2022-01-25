@@ -30,7 +30,7 @@ public:
     sf::Color color;
     int points = 0;
     std::map<Resource, int> resources{
-        {brick, 9}, {lumber, 9}, {ore, 9}, {grain, 9}, {wool, 9}};
+        {brick, 0}, {lumber, 0}, {ore, 0}, {grain, 0}, {wool, 0}};
     std::map<Product, int> buildings{
         {settlement, 5}, {city, 4}, {road, 15}};
 
