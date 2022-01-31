@@ -40,12 +40,12 @@ class Catan
 public:
     sf::RenderWindow *window;
 
-    GameState gameState = menu;
+    GameState gameState = game;
     TurnState turnState = build;
     Map map;
 
     sf::Font font;
-    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures, robberTexture;
+    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures, robberTexture, playTexture;
 
     const int textureSize = 256;
     const int resourceTextureSize = 128;
@@ -81,6 +81,9 @@ public:
     sf::Vector2u placedCityPos;
     sf::Vector2u robberPos;
 
+    bool robberActive = false;
+    bool robbingActive = false;
+
     Product chosenProduct;
 
     bool setupEnabled = true;
@@ -92,6 +95,13 @@ public:
 
     std::vector<sf::RectangleShape> gameButtons;
     std::vector<sf::RectangleShape> diceRects;
+    std::vector<sf::RectangleShape> playerBackgroundsRects;
+
+    std::vector<sf::CircleShape> numberShapes;
+    std::vector<Tile> numberTiles;
+    std::vector<sf::Text> numberTexts;
+
+    std::vector<Player *> playersToBeRobbed;
 
     std::vector<sf::Color> colorPalette = {
         sf::Color(0, 157, 174),
@@ -118,9 +128,11 @@ public:
         this->resourceTextures.setSmooth(true);
         this->robberTexture.loadFromFile("../assets/textures/robber.png");
         this->robberTexture.setSmooth(true);
+        this->playTexture.loadFromFile("../assets/textures/play.png");
+        this->playTexture.setSmooth(true);
         this->font.loadFromFile("../assets/fonts/arial.ttf");
 
-        createButtons();
+        generateButtons();
         generateDice();
     }
 
@@ -204,12 +216,11 @@ public:
 
         // Player background
         sf::Vector2f playerBackgroundSize(90 * gSW, 13 * gSH);
-        sf::RectangleShape playerBackground(playerBackgroundSize);
-        playerBackground.setOrigin(backgroundCenterOffset);
         // Player
         for (size_t i = 0; i < players.size(); i++)
         {
             auto player = players[i];
+            auto playerBackground = playerBackgroundsRects[i];
             playerBackground.setPosition(sf::Vector2f(-45 * gSW, -23 * gSH + i * (playerBackgroundSize.y + 2 * gSH)));
             sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 23 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
             sf::Text playerName(player.name, font);
@@ -230,6 +241,12 @@ public:
                 playerBackground.setFillColor(colorPalette[4]);
             else
                 playerBackground.setFillColor(colorPalette[3]);
+
+            if (robbingActive)
+                for (auto player2 : playersToBeRobbed)
+                    if (player.id == player2->id)
+                        playerBackground.setFillColor(spotColor);
+
             window->draw(playerBackground);
             window->draw(playerName);
             window->draw(playerPoints);
@@ -325,38 +342,18 @@ public:
     }
     void drawNumbers()
     {
-        for (size_t y = 0; y < map.height; y++)
+        for (size_t i = 0; i < numberShapes.size(); i++)
         {
-            for (size_t x = 0; x < map.width; x++)
-            {
-                Tile tile = map.tileMap[x][y];
-                if (tile.type != none && tile.type != ocean && tile.type != desert)
-                {
-                    sf::Vector2f position(bgTileWidth / 2 + x * bgTileWidth + ((y + 1) % 2) * (bgTileWidth / 2), bgTileHeight / 2 + y * (3 * (bgTileHeight / 4)));
-                    sf::CircleShape numberShape(numberSize);
-                    sf::Text numberText;
-
-                    numberShape.setOrigin(numberSize, numberSize);
-                    numberShape.setPosition(position);
-
-                    int diceSum = this->diceRolls[0] + this->diceRolls[1];
-                    (tile.number == diceSum) ? numberShape.setFillColor(sf::Color::Green) : numberShape.setFillColor(sf::Color::White);
-
-                    numberText.setFont(this->font);
-                    numberText.setFillColor(sf::Color::Black);
-                    numberText.setStyle(sf::Text::Bold);
-                    numberText.setString(std::to_string(tile.number));
-                    numberText.setCharacterSize(std::floor(numberSize));
-
-                    sf::FloatRect textSize = numberText.getLocalBounds();
-                    numberText.setOrigin(textSize.width / 2, textSize.height);
-                    numberText.setPosition(position);
-
-                    this->window->draw(numberShape);
-                    this->window->draw(numberText);
-                }
-            }
+            auto shape = numberShapes[i];
+            int diceSum = this->diceRolls[0] + this->diceRolls[1];
+            if (robberActive)
+                shape.setFillColor(spotColor);
+            else if (diceSum == numberTiles[i].number)
+                shape.setFillColor(sf::Color::Green);
+            window->draw(shape);
         }
+        for (auto text : numberTexts)
+            window->draw(text);
     }
     void drawBuildings()
     {
@@ -383,10 +380,117 @@ public:
         robber.setTexture(&robberTexture);
         robber.setFillColor(sf::Color(138, 138, 138));
         robber.setOrigin(sf::Vector2f(robber.getGlobalBounds().width / 2, robber.getGlobalBounds().width / 2));
-        robber.setPosition(sf::Vector2f(bgTileWidth / 2 + pos.x * bgTileWidth + ((pos.y + 1) % 2) * (bgTileWidth / 2), bgTileHeight / 2 + pos.y * (3 * (bgTileHeight / 4))));
+        robber.setPosition(sf::Vector2f(bgTileWidth / 2 + pos.x * bgTileWidth + ((pos.y + 1) % 2) * (bgTileWidth / 2) + bgTileWidth / 4, bgTileHeight / 2 + pos.y * (3 * (bgTileHeight / 4))));
         window->draw(robber);
     }
 
+    void generatePlayerBackgrounds()
+    {
+        sf::Vector2f playerBackgroundSize(90 * gSW, 13 * gSH);
+        sf::RectangleShape playerBackground(playerBackgroundSize);
+        playerBackground.setOrigin(backgroundCenterOffset);
+
+        for (size_t i = 0; i < players.size(); i++)
+        {
+            auto player = players[i];
+            playerBackground.setPosition(sf::Vector2f(-45 * gSW, -23 * gSH + i * (playerBackgroundSize.y + 2 * gSH)));
+            sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 23 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
+            playerBackgroundsRects.push_back(playerBackground);
+        }
+    }
+    void generateNumbers()
+    {
+        for (size_t y = 0; y < map.height; y++)
+        {
+            for (size_t x = 0; x < map.width; x++)
+            {
+                Tile tile = map.tileMap[x][y];
+                if (tile.type != none && tile.type != ocean && tile.type != desert)
+                {
+                    sf::Vector2f position(bgTileWidth / 2 + x * bgTileWidth + ((y + 1) % 2) * (bgTileWidth / 2), bgTileHeight / 2 + y * (3 * (bgTileHeight / 4)));
+                    sf::CircleShape numberShape(numberSize);
+                    sf::Text numberText;
+
+                    numberShape.setOrigin(numberSize, numberSize);
+                    numberShape.setPosition(position);
+                    numberShape.setFillColor(sf::Color::White);
+
+                    numberText.setFont(this->font);
+                    numberText.setFillColor(sf::Color::Black);
+                    numberText.setStyle(sf::Text::Bold);
+                    numberText.setString(std::to_string(tile.number));
+                    numberText.setCharacterSize(std::floor(numberSize));
+
+                    sf::FloatRect textSize = numberText.getLocalBounds();
+                    numberText.setOrigin(textSize.width / 2, textSize.height);
+                    numberText.setPosition(position);
+
+                    numberShapes.push_back(numberShape);
+                    numberTiles.push_back(tile);
+                    numberTexts.push_back(numberText);
+                }
+            }
+        }
+    }
+    void robPlayer(sf::Vector2f mousePos)
+    {
+        for (size_t i = 0; i < playerBackgroundsRects.size(); i++)
+        {
+            bool canBeRobbed = false;
+            for (auto player : playersToBeRobbed)
+                if (players[i].id == player->id)
+                    canBeRobbed = true;
+            if (!canBeRobbed) continue;
+            if (playerBackgroundsRects[i].getGlobalBounds().contains(mousePos))
+            {
+                std::vector<size_t> indexes;
+                for (size_t j = 0; j < players[i].resources.size(); j++)
+                    if (players[i].resources.at(Resource(j)) > 0)
+                        indexes.push_back(j);
+
+                std::uniform_int_distribution<std::mt19937::result_type> dist(0, indexes.size());
+                auto index = dist(rng);
+                players[i].resources[Resource(index)] -= 1;
+                currentPlayer->resources[Resource(index)] += 1;
+                robbingActive = false;
+                break;
+            }
+        }
+    }
+    void placeRobber(sf::Vector2f mousePos)
+    {
+        for (size_t i = 0; i < numberShapes.size(); i++)
+        {
+            auto shape = numberShapes[i];
+            if (shape.getGlobalBounds().contains(mousePos))
+            {
+                robberActive = false;
+                robberPos = numberTiles[i].position;
+
+                auto adjSpots = getAdjacentSpots(map.tileMap[robberPos.x][robberPos.y]);
+                std::vector<Player *> potentialPlayers;
+                playersToBeRobbed.clear();
+                for (auto spot : adjSpots)
+                    if (spot->type != road && spot->isBuilt)
+                        potentialPlayers.push_back(spot->owner);
+                for (auto player : potentialPlayers)
+                {
+                    bool canBeRobbed = false;
+                    for (size_t j = 0; j < player->resources.size(); j++)
+                        if (player->resources.at(Resource(j)) > 0)
+                        {
+                            canBeRobbed = true;
+                            break;
+                        }
+                    if (canBeRobbed && player->id != currentPlayer->id)
+                        playersToBeRobbed.push_back(player);
+                }
+                gatherResources();
+                robbingActive = true;
+                break;
+            }
+        }
+    }
     void generateDice()
     {
         diceRects.clear();
@@ -401,10 +505,10 @@ public:
             diceRects.push_back(diceFace);
         }
     }
-    void createButtons()
+    void generateButtons()
     {
         sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
-        int buttonCount = 5;
+        int buttonCount = 7;
         double buttonSpacing = 3 * gSW;
         double buttonWidth = (90 * gSW - (buttonCount - 1) * buttonSpacing) / buttonCount;
         for (size_t j = 0; j < buttonCount; j++)
@@ -420,23 +524,44 @@ public:
             case 2:
                 button.setTexture(&buildingsTextures);
                 button.setTextureRect(sf::IntRect(j * textureSize, 0, textureSize, textureSize));
+                button.setFillColor(colorPalette[2]);
                 break;
             case 3:
+                button.setFillColor(colorPalette[2]);
                 break;
             case 4:
+                button.setFillColor(colorPalette[2]);
+                break;
+            case 5:
+                buttonWidth += 10 * gSW;
+                button.setSize(sf::Vector2f(buttonWidth, buttonWidth));
+                button.setOrigin(backgroundBottomLeftOffset);
+                button.setPosition(sf::Vector2f(-5 * gSW - buttonWidth, -2 * gSH - buttonWidth));
+                button.setFillColor(colorPalette[3]);
+                button.setOutlineThickness(gSW);
+                button.setOutlineColor(sf::Color::White);
+                break;
+            case 6:
+                button.setSize(sf::Vector2f(buttonWidth - 2 * gSH, buttonWidth - 2 * gSH));
+                button.setOrigin(backgroundBottomLeftOffset);
+                button.setPosition(sf::Vector2f(-5 * gSW - buttonWidth + 1 * gSH, -1 * gSH - buttonWidth));
+                button.setTexture(&playTexture);
+                button.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
+                button.setFillColor(colorPalette[4]);
                 break;
             }
-            button.setFillColor(colorPalette[2]);
             gameButtons.push_back(button);
         }
     }
-    void gatherResourcers()
+    void gatherResources()
     {
         int diceSum = diceRolls[0] + diceRolls[1];
+        if (diceSum == 7 && !setupEnabled)
+            return;
         for (auto tileRow : map.tileMap)
             for (auto tile : tileRow)
             {
-                if (setupEnabled || tile.number == diceSum)
+                if (setupEnabled || tile.number == diceSum && sf::Vector2u(tile.position.x, tile.position.y) != robberPos)
                 {
                     auto adjacentSpots = getAdjacentSpots(tile);
                     for (auto spot : adjacentSpots)
@@ -458,7 +583,7 @@ public:
                     currentPlayer--;
                 else
                 {
-                    gatherResourcers();
+                    gatherResources();
                     setupEnabled = false;
                     setupSecondTurn = false;
                     turnState = dice;
@@ -470,7 +595,7 @@ public:
                 setupSecondTurn = true;
             chooseProduct(settlement);
         }
-        else if (turnState != dice)
+        else if (turnState != dice && !robbingActive && !robberActive)
         {
             currentPlayer = (currentPlayer + 1 < players.end()) ? currentPlayer + 1 : players.begin();
             turnState = dice;
@@ -515,6 +640,8 @@ public:
     void setMap(std::string mapName)
     {
         map.loadFromFile(mapName);
+        generatePlayerBackgrounds();
+        generateNumbers();
         robberPos = map.robberPos;
         generateBuildingSpots();
         chosenProduct = settlement;
@@ -526,7 +653,9 @@ public:
         std::vector<std::mt19937::result_type> diceRolls = {diceDist(rng), diceDist(rng)};
         this->diceRolls = diceRolls;
         generateDice();
-        gatherResourcers();
+        gatherResources();
+        if (diceRolls[0] + diceRolls[1] == 7)
+            robberActive = true;
         turnState = idle;
     }
     void placeBuilding(Product type, sf::Vector2f mousePos)
@@ -902,24 +1031,29 @@ public:
         }
         return adjacentSpots;
     }
-
     void processMouseClick(sf::Vector2f mousePos)
     {
-        if (!setupEnabled)
+        if (!setupEnabled && !robberActive)
         {
             if (isPressed(diceRects[0], mousePos) || isPressed(diceRects[1], mousePos))
                 rollTheDice();
             if (isPressed(gameButtons[0], mousePos))
-                chooseProduct(road);
-            if (isPressed(gameButtons[1], mousePos))
                 chooseProduct(settlement);
-            if (isPressed(gameButtons[2], mousePos))
+            if (isPressed(gameButtons[1], mousePos))
                 chooseProduct(city);
+            if (isPressed(gameButtons[2], mousePos))
+                chooseProduct(road);
             if (isPressed(gameButtons[3], mousePos))
                 std::cout << 3 << "\n";
             if (isPressed(gameButtons[4], mousePos))
                 std::cout << 4 << "\n";
+            if (isPressed(gameButtons[5], mousePos))
+                endTurn();
         }
+        if (robberActive)
+            placeRobber(mousePos);
+        if (robbingActive)
+            robPlayer(mousePos);
         if (turnState == build)
             placeBuilding(chosenProduct, mousePos);
     }
@@ -927,6 +1061,7 @@ public:
     {
         return rect.getGlobalBounds().contains(pos);
     }
+
     void debug()
     {
         sf::Vector2f pos(0, 0);

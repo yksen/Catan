@@ -36,8 +36,6 @@ int main()
             }
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter)
                 game.nextGameState();
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LShift)
-                game.endTurn();
         }
 
         game.draw();

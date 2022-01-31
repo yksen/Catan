@@ -2,7 +2,6 @@
 #define Tile_H
 
 #include "Building.hpp"
-#include <vector>
 #include <SFML/System.hpp>
 
 enum TileType
@@ -20,7 +19,7 @@ enum TileType
 class Tile
 {
 public:
-    sf::Vector2i position;
+    sf::Vector2u position;
     sf::Vector2f windowPosition;
     TileType type;
     int number;
