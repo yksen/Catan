@@ -509,8 +509,8 @@ public:
     {
         sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
         int buttonCount = 7;
-        double buttonSpacing = 3 * gSW;
-        double buttonWidth = (90 * gSW - (buttonCount - 1) * buttonSpacing) / buttonCount;
+        int buttonSpacing = 3 * gSW;
+        int buttonWidth = (90 * gSW - (buttonCount - 3) * buttonSpacing) / (buttonCount - 2);
         for (size_t j = 0; j < buttonCount; j++)
         {
             sf::Vector2f buttonSize(buttonWidth, buttonWidth);
