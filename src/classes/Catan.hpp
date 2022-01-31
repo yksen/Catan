@@ -45,7 +45,7 @@ public:
     Map map;
 
     sf::Font font;
-    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures;
+    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures, robberTexture;
 
     const int textureSize = 256;
     const int resourceTextureSize = 128;
@@ -57,6 +57,7 @@ public:
     float gameStateHeight;
     float gSW;
     float gSH;
+    sf::Vector2f backgroundCenterOffset;
 
     float bgTileSize = 95;
     float bgTileWidth = bgTileSize * sqrt(3);
@@ -72,26 +73,40 @@ public:
 
     sf::Color spotColor = sf::Color::Cyan;
 
-    std::vector<std::mt19937::result_type> diceRolls = {0, 0};
+    std::vector<std::mt19937::result_type> diceRolls = {4, 3};
 
     std::vector<Player> players = {Player(L"abc", sf::Color::Green), Player(L"xyz", sf::Color::Yellow), Player(L"gżegżółka", sf::Color::Red), Player(L"test123", sf::Color::Blue)};
     std::vector<Player>::iterator currentPlayer = players.begin();
 
+    sf::Vector2u placedCityPos;
+    sf::Vector2u robberPos;
+
     Product chosenProduct;
 
-    sf::Vector2u placedCityPos;
     bool setupEnabled = true;
     bool setupSecondTurn = false;
     bool debugingEnabled = false;
+    bool drawCoordinates = false;
 
     std::vector<Building *> availableSpots;
+
+    std::vector<sf::RectangleShape> gameButtons;
+    std::vector<sf::RectangleShape> diceRects;
+
+    std::vector<sf::Color> colorPalette = {
+        sf::Color(0, 157, 174),
+        sf::Color(113, 223, 231),
+        sf::Color(194, 255, 249),
+        sf::Color(255, 230, 82),
+        sf::Color(255, 211, 182)};
 
     Catan(sf::RenderWindow *a)
         : window(a),
           gameStateWidth(window->getSize().x / 4),
           gameStateHeight(window->getSize().y),
           gSW(gameStateWidth / 100),
-          gSH(gameStateHeight / 100)
+          gSH(gameStateHeight / 100),
+          backgroundCenterOffset((int)-window->getSize().x + gameStateWidth / 2, -gameStateHeight / 2)
     {
         this->tileTextures.loadFromFile("../assets/textures/tiles.png");
         this->tileTextures.setSmooth(true);
@@ -101,7 +116,12 @@ public:
         this->diceTextures.setSmooth(true);
         this->resourceTextures.loadFromFile("../assets/textures/resources.png");
         this->resourceTextures.setSmooth(true);
+        this->robberTexture.loadFromFile("../assets/textures/robber.png");
+        this->robberTexture.setSmooth(true);
         this->font.loadFromFile("../assets/fonts/arial.ttf");
+
+        createButtons();
+        generateDice();
     }
 
     void draw()
@@ -164,49 +184,34 @@ public:
     }
     void drawGameState()
     {
-        std::vector<sf::Color> colorPalette = {
-            sf::Color(0, 157, 174),
-            sf::Color(113, 223, 231),
-            sf::Color(194, 255, 249),
-            sf::Color(255, 230, 82)};
-
         sf::RectangleShape background(sf::Vector2f(gameStateWidth, gameStateHeight));
         background.setFillColor(colorPalette[1]);
         background.setOutlineColor(sf::Color::White);
         background.setOutlineThickness(gSW);
         sf::Vector2f backgroundPos(window->getSize().x - gameStateWidth, 0);
-        sf::Vector2f backgroundCenterOffset((int)-window->getSize().x + gameStateWidth / 2, -gameStateHeight / 2);
         background.setPosition(backgroundPos);
         window->draw(background);
 
+        // Dice background
         sf::RectangleShape diceBackground(sf::Vector2f(90 * gSW, 20 * gSH));
         diceBackground.setFillColor(colorPalette[2]);
         diceBackground.setOrigin(backgroundCenterOffset);
         diceBackground.setPosition(-45 * gSW, -48 * gSH);
         window->draw(diceBackground);
+        // Dice
+        for (auto rect : diceRects)
+            window->draw(rect);
 
-        if (diceRolls[0] != 0)
-            for (size_t i = 0; i < diceRolls.size(); i++)
-            {
-                auto value = diceRolls[i] - 1;
-                sf::RectangleShape diceFace(sf::Vector2f(18 * gSH, 18 * gSH));
-                diceFace.setOrigin(backgroundCenterOffset.x, backgroundCenterOffset.y + 48 * gSH);
-                diceFace.setPosition(-42 * gSW + i * 43.5 * gSW, 1 * gSH);
-                diceFace.setTexture(&diceTextures);
-                diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
-                window->draw(diceFace);
-            }
-
+        // Player background
         sf::Vector2f playerBackgroundSize(90 * gSW, 13 * gSH);
         sf::RectangleShape playerBackground(playerBackgroundSize);
-        playerBackground.setFillColor(colorPalette[3]);
         playerBackground.setOrigin(backgroundCenterOffset);
-
+        // Player
         for (size_t i = 0; i < players.size(); i++)
         {
             auto player = players[i];
-            playerBackground.setPosition(sf::Vector2f(-45 * gSW, -26 * gSH + i * (playerBackgroundSize.y + 2 * gSH)));
-            sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 26 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
+            playerBackground.setPosition(sf::Vector2f(-45 * gSW, -23 * gSH + i * (playerBackgroundSize.y + 2 * gSH)));
+            sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 23 * gSH - i * (playerBackgroundSize.y + 2 * gSH));
             sf::Text playerName(player.name, font);
             playerName.setCharacterSize(3 * gSH);
             playerName.setFillColor(player.color);
@@ -221,10 +226,15 @@ public:
             playerPoints.setOrigin(playerBackgroundOffset);
             playerPoints.setPosition(sf::Vector2f(88 * gSW - playerPoints.getLocalBounds().width, 0));
 
+            if (player.id == currentPlayer->id)
+                playerBackground.setFillColor(colorPalette[4]);
+            else
+                playerBackground.setFillColor(colorPalette[3]);
             window->draw(playerBackground);
             window->draw(playerName);
             window->draw(playerPoints);
 
+            // Buildings
             for (size_t j = 0; j < player.buildings.size(); j++)
             {
                 sf::RectangleShape buildingRect(sf::Vector2f(3 * gSH, 3 * gSH));
@@ -243,7 +253,7 @@ public:
                 amountText.setPosition(sf::Vector2f(2 * gSW + j * (3 * gSH + gSW) + 1.5 * gSH - textRect.width / 2, 5 * gSH));
                 window->draw(amountText);
             }
-
+            // Resources
             for (size_t j = 0; j < player.resources.size(); j++)
             {
                 sf::RectangleShape resourceRect(sf::Vector2f(3 * gSH, 3 * gSH));
@@ -255,33 +265,25 @@ public:
 
                 // if (currentPlayer == players.begin() + i)
                 // {
-                    sf::Text amountText(std::to_string(player.resources.at(Resource(j))), font);
-                    amountText.setCharacterSize(3 * gSH);
-                    amountText.setOutlineThickness(1);
-                    amountText.setOrigin(playerBackgroundOffset);
-                    auto textRect = amountText.getLocalBounds();
-                    amountText.setPosition(sf::Vector2f(6 * gSW + (3 + j) * (3 * gSH + gSW) + 1.5 * gSH - textRect.width / 2, 5 * gSH));
-                    window->draw(amountText);
+                sf::Text amountText(std::to_string(player.resources.at(Resource(j))), font);
+                amountText.setCharacterSize(3 * gSH);
+                amountText.setOutlineThickness(1);
+                amountText.setOrigin(playerBackgroundOffset);
+                auto textRect = amountText.getLocalBounds();
+                amountText.setPosition(sf::Vector2f(6 * gSW + (3 + j) * (3 * gSH + gSW) + 1.5 * gSH - textRect.width / 2, 5 * gSH));
+                window->draw(amountText);
                 // }
             }
-
-            sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
-            for (size_t j = 0; j < 3; j++)
-            {
-                sf::Vector2f buttonSize(30 * gSW, 30 * gSW);
-                sf::RectangleShape button(buttonSize);
-                button.setFillColor(colorPalette[2]);
-                button.setOrigin(backgroundCenterOffset);
-                button.setPosition(sf::Vector2f());
-
-                // window->draw(button);
-            }
+            // Buttons
+            for (auto button : gameButtons)
+                window->draw(button);
         }
     }
     void drawMap()
     {
         drawTiles();
         drawNumbers();
+        drawRobber();
         drawBuildings();
         drawBuildingSpots();
     }
@@ -374,7 +376,60 @@ public:
             for (auto spot : availableSpots)
                 window->draw(spot->circle);
     }
+    void drawRobber()
+    {
+        auto pos = robberPos;
+        sf::RectangleShape robber(sf::Vector2f(7 * gSH, 7 * gSH));
+        robber.setTexture(&robberTexture);
+        robber.setFillColor(sf::Color(138, 138, 138));
+        robber.setOrigin(sf::Vector2f(robber.getGlobalBounds().width / 2, robber.getGlobalBounds().width / 2));
+        robber.setPosition(sf::Vector2f(bgTileWidth / 2 + pos.x * bgTileWidth + ((pos.y + 1) % 2) * (bgTileWidth / 2), bgTileHeight / 2 + pos.y * (3 * (bgTileHeight / 4))));
+        window->draw(robber);
+    }
 
+    void generateDice()
+    {
+        diceRects.clear();
+        for (size_t i = 0; i < diceRolls.size(); i++)
+        {
+            auto value = diceRolls[i] - 1;
+            sf::RectangleShape diceFace(sf::Vector2f(18 * gSH, 18 * gSH));
+            diceFace.setOrigin(backgroundCenterOffset.x, backgroundCenterOffset.y + 48 * gSH);
+            diceFace.setPosition(-42 * gSW + i * 43.5 * gSW, 1 * gSH);
+            diceFace.setTexture(&diceTextures);
+            diceFace.setTextureRect(sf::IntRect((value % 3) * textureSize, ((value / 3) % 3) * textureSize, textureSize, textureSize));
+            diceRects.push_back(diceFace);
+        }
+    }
+    void createButtons()
+    {
+        sf::Vector2f backgroundBottomLeftOffset((int)-window->getSize().x + gameStateWidth, -gameStateHeight);
+        int buttonCount = 5;
+        double buttonSpacing = 3 * gSW;
+        double buttonWidth = (90 * gSW - (buttonCount - 1) * buttonSpacing) / buttonCount;
+        for (size_t j = 0; j < buttonCount; j++)
+        {
+            sf::Vector2f buttonSize(buttonWidth, buttonWidth);
+            sf::RectangleShape button(buttonSize);
+            button.setOrigin(backgroundCenterOffset);
+            button.setPosition(sf::Vector2f(-45 * gSW + j * (buttonWidth + buttonSpacing), 48 * gSH - buttonWidth));
+            switch (j)
+            {
+            case 0:
+            case 1:
+            case 2:
+                button.setTexture(&buildingsTextures);
+                button.setTextureRect(sf::IntRect(j * textureSize, 0, textureSize, textureSize));
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            }
+            button.setFillColor(colorPalette[2]);
+            gameButtons.push_back(button);
+        }
+    }
     void gatherResourcers()
     {
         int diceSum = diceRolls[0] + diceRolls[1];
@@ -415,7 +470,7 @@ public:
                 setupSecondTurn = true;
             chooseProduct(settlement);
         }
-        else
+        else if (turnState != dice)
         {
             currentPlayer = (currentPlayer + 1 < players.end()) ? currentPlayer + 1 : players.begin();
             turnState = dice;
@@ -460,6 +515,7 @@ public:
     void setMap(std::string mapName)
     {
         map.loadFromFile(mapName);
+        robberPos = map.robberPos;
         generateBuildingSpots();
         chosenProduct = settlement;
         getAvailableSpots(chosenProduct);
@@ -469,7 +525,9 @@ public:
         std::uniform_int_distribution<std::mt19937::result_type> diceDist(1, 6);
         std::vector<std::mt19937::result_type> diceRolls = {diceDist(rng), diceDist(rng)};
         this->diceRolls = diceRolls;
+        generateDice();
         gatherResourcers();
+        turnState = idle;
     }
     void placeBuilding(Product type, sf::Vector2f mousePos)
     {
@@ -763,7 +821,7 @@ public:
         std::vector<Building *> adjacentSpots;
         size_t x = tile.position.x;
         size_t y = tile.position.y;
-        
+
         adjacentSpots.push_back(
             &map.verticesMap[y % 2 ? 2 * x : 2 * x + 1][y]);
         adjacentSpots.push_back(
@@ -847,48 +905,70 @@ public:
 
     void processMouseClick(sf::Vector2f mousePos)
     {
+        if (!setupEnabled)
+        {
+            if (isPressed(diceRects[0], mousePos) || isPressed(diceRects[1], mousePos))
+                rollTheDice();
+            if (isPressed(gameButtons[0], mousePos))
+                chooseProduct(road);
+            if (isPressed(gameButtons[1], mousePos))
+                chooseProduct(settlement);
+            if (isPressed(gameButtons[2], mousePos))
+                chooseProduct(city);
+            if (isPressed(gameButtons[3], mousePos))
+                std::cout << 3 << "\n";
+            if (isPressed(gameButtons[4], mousePos))
+                std::cout << 4 << "\n";
+        }
         if (turnState == build)
             placeBuilding(chosenProduct, mousePos);
+    }
+    bool isPressed(sf::RectangleShape rect, sf::Vector2f pos)
+    {
+        return rect.getGlobalBounds().contains(pos);
     }
     void debug()
     {
         sf::Vector2f pos(0, 0);
-        for (auto tileRow : map.tileMap)
-            for (auto tile : tileRow)
-            {
-                sf::Text txt(std::to_string(tile.position.x) + "," + std::to_string(tile.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(tile.windowPosition);
-                window->draw(txt);
-            }
-        for (auto spotRow : map.verticesMap)
-            for (auto spot : spotRow)
-            {
-                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(spot.windowPosition);
-                // for (auto testSpot : test)
-                //     if (testSpot.position == spot.position && testSpot.type == spot.type)
-                //         txt.setFillColor(sf::Color::Red);
-                window->draw(txt);
-            }
-        for (auto spotRow : map.edgesMap)
-            for (auto spot : spotRow)
-            {
-                sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
-                txt.setCharacterSize(25);
-                txt.setOutlineThickness(1);
-                txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
-                txt.setPosition(spot.windowPosition);
-                // for (auto testSpot : test)
-                //     if (testSpot.position == spot.position && testSpot.type == spot.type)
-                //         txt.setFillColor(sf::Color::Red);
-                window->draw(txt);
-            }
+        if (drawCoordinates)
+        {
+            for (auto tileRow : map.tileMap)
+                for (auto tile : tileRow)
+                {
+                    sf::Text txt(std::to_string(tile.position.x) + "," + std::to_string(tile.position.y), font);
+                    txt.setCharacterSize(25);
+                    txt.setOutlineThickness(1);
+                    txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                    txt.setPosition(tile.windowPosition);
+                    window->draw(txt);
+                }
+            for (auto spotRow : map.verticesMap)
+                for (auto spot : spotRow)
+                {
+                    sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+                    txt.setCharacterSize(25);
+                    txt.setOutlineThickness(1);
+                    txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                    txt.setPosition(spot.windowPosition);
+                    // for (auto testSpot : test)
+                    //     if (testSpot.position == spot.position && testSpot.type == spot.type)
+                    //         txt.setFillColor(sf::Color::Red);
+                    window->draw(txt);
+                }
+            for (auto spotRow : map.edgesMap)
+                for (auto spot : spotRow)
+                {
+                    sf::Text txt(std::to_string(spot.position.x) + "," + std::to_string(spot.position.y), font);
+                    txt.setCharacterSize(25);
+                    txt.setOutlineThickness(1);
+                    txt.setOrigin(sf::Vector2f(txt.getGlobalBounds().width / 2, txt.getGlobalBounds().height / 2));
+                    txt.setPosition(spot.windowPosition);
+                    // for (auto testSpot : test)
+                    //     if (testSpot.position == spot.position && testSpot.type == spot.type)
+                    //         txt.setFillColor(sf::Color::Red);
+                    window->draw(txt);
+                }
+        }
         pos = printAndMoveDebugLine(std::to_string(window->getSize().x) + "x" + std::to_string(window->getSize().y), pos);
         pos = printAndMoveDebugLine("Map name: " + map.name, pos);
         pos = printAndMoveDebugLine("", pos);

@@ -8,9 +8,9 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <time.h>
 
-std::random_device dev;
-std::mt19937 rng(dev());
+std::mt19937 rng(time(0));
 
 class Map
 {
@@ -24,6 +24,7 @@ public:
     size_t vMapWidth, vMapHeight;
     std::vector<std::vector<Building>> edgesMap;
     size_t eMapWidth, eMapHeight;
+    sf::Vector2u robberPos;
 
     void loadFromFile(std::string mapName)
     {
@@ -81,7 +82,10 @@ public:
                         auto randomNumber = numberDist(rng);
 
                         if (TileType(this->typeDistribution[randomType].first) == desert)
+                        {
                             this->tileMap[x][y] = Tile(x, y, TileType(this->typeDistribution[randomType].first), 0);
+                            robberPos = {x, y};
+                        }
                         else
                         {
                             this->tileMap[x][y] = Tile(x, y, TileType(this->typeDistribution[randomType].first), this->numberDistribution[randomNumber].first);

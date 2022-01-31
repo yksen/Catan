@@ -20,24 +20,24 @@ int main()
         {
             if (event.type == sf::Event::Closed || event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
                 window.close();
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Space)
-                game.setMap("Standard");
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::RShift && game.turnState == dice)
-                game.rollTheDice();
+            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
+                game.processMouseClick(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
+            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::F3)
+            {
+                if (!game.debugingEnabled)
+                    game.debugingEnabled = !game.debugingEnabled;
+                else if (!game.drawCoordinates)
+                    game.drawCoordinates = !game.drawCoordinates;
+                else
+                {
+                    game.drawCoordinates = !game.drawCoordinates;
+                    game.debugingEnabled = !game.debugingEnabled;
+                }
+            }
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter)
                 game.nextGameState();
             if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::LShift)
                 game.endTurn();
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::S)
-                game.chooseProduct(settlement);
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::C)
-                game.chooseProduct(city);
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::R)
-                game.chooseProduct(road);
-            if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::F3)
-                game.debugingEnabled = !game.debugingEnabled;
-            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
-                game.processMouseClick(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
         }
 
         game.draw();
