@@ -33,7 +33,7 @@ std::map<Product, std::map<Resource, int>> ProductCost{
     {settlement, {{brick, 1}, {lumber, 1}, {grain, 1}, {wool, 1}}},
     {city, {{ore, 3}, {grain, 2}}},
     {road, {{brick, 1}, {lumber, 1}}},
-    {card, {{ore, 1}, {grain, 1}, {wool, 1}}}};
+    {devCard, {{ore, 1}, {grain, 1}, {wool, 1}}}};
 
 class Catan
 {
@@ -45,7 +45,7 @@ public:
     Map map;
 
     sf::Font font;
-    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures, robberTexture, playTexture;
+    sf::Texture tileTextures, buildingsTextures, diceTextures, resourceTextures, robberTexture, playTexture, devCardTexture;
 
     const int textureSize = 256;
     const int resourceTextureSize = 128;
@@ -57,6 +57,7 @@ public:
     float gameStateHeight;
     float gSW;
     float gSH;
+    sf::Vector2f playerBackgroundSize;
     sf::Vector2f backgroundCenterOffset;
 
     float bgTileSize = 95;
@@ -116,7 +117,8 @@ public:
           gameStateHeight(window->getSize().y),
           gSW(gameStateWidth / 100),
           gSH(gameStateHeight / 100),
-          backgroundCenterOffset((int)-window->getSize().x + gameStateWidth / 2, -gameStateHeight / 2)
+          backgroundCenterOffset((int)-window->getSize().x + gameStateWidth / 2, -gameStateHeight / 2),
+          playerBackgroundSize(90 * gSW, 13 * gSH)
     {
         this->tileTextures.loadFromFile("../assets/textures/tiles.png");
         this->tileTextures.setSmooth(true);
@@ -130,6 +132,8 @@ public:
         this->robberTexture.setSmooth(true);
         this->playTexture.loadFromFile("../assets/textures/play.png");
         this->playTexture.setSmooth(true);
+        this->devCardTexture.loadFromFile("../assets/textures/dev_card.png");
+        this->devCardTexture.setSmooth(true);
         this->font.loadFromFile("../assets/fonts/arial.ttf");
 
         generateButtons();
@@ -214,8 +218,6 @@ public:
         for (auto rect : diceRects)
             window->draw(rect);
 
-        // Player background
-        sf::Vector2f playerBackgroundSize(90 * gSW, 13 * gSH);
         // Player
         for (size_t i = 0; i < players.size(); i++)
         {
@@ -291,6 +293,9 @@ public:
                 window->draw(amountText);
                 // }
             }
+            // Cards
+            for (auto card : player.cardRects)
+                window->draw(card);
             // Buttons
             for (auto button : gameButtons)
                 window->draw(button);
@@ -384,6 +389,82 @@ public:
         window->draw(robber);
     }
 
+    void playDevCard(CardType type)
+    {
+        switch (type)
+        {
+        case knight:
+            robberActive = true;
+            break;
+        case roadBuilding:
+            break;
+        case yearOfPlenty:
+            break;
+        case monopoly:
+            break;
+        case victoryPoint:
+            currentPlayer->points += 1;
+            break;
+        }
+    }
+    void generateCard()
+    {
+        auto type = *(currentPlayer->cards.end() - 1);
+        auto index = currentPlayer->id;
+        sf::RectangleShape card(sf::Vector2f(3 * gSH, 3 * gSH));
+        card.setTexture(&devCardTexture);
+        card.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
+
+        sf::Vector2f playerBackgroundOffset((int)-window->getSize().x + gameStateWidth - 5 * gSW, -gameStateHeight / 2 + 23 * gSH - index * (playerBackgroundSize.y + 2 * gSH));
+        card.setOrigin(playerBackgroundOffset);
+        card.setPosition(sf::Vector2f(6 * gSW + (currentPlayer->cards.size() - 1) * 4 * gSH + 8 * (3 * gSH + gSW), 9 * gSH));
+
+        switch (type)
+        {
+        case knight:
+            card.setFillColor(sf::Color::Red);
+            break;
+        case roadBuilding:
+            break;
+        case yearOfPlenty:
+            break;
+        case monopoly:
+            break;
+        case victoryPoint:
+            card.setFillColor(sf::Color::Yellow);
+            break;
+        }
+        currentPlayer->cardRects.push_back(card);
+    }
+    void buyDevCard()
+    {
+        if (canBuy(devCard))
+        {
+            int sum = 0;
+            for (auto item : map.cardDistribution)
+                sum += item.second;
+            if (sum == 0)
+                return;
+
+            std::uniform_int_distribution<std::mt19937::result_type> dist(1, sum);
+            auto index = dist(rng);
+            sum = 0;
+            for (auto item : map.cardDistribution)
+            {
+                if (item.second <= 0)
+                    continue;
+                if (sum + item.second >= index)
+                {
+                    map.cardDistribution.at(item.first) -= 1;
+                    currentPlayer->cards.push_back(item.first);
+                    generateCard();
+                    break;
+                }
+                sum += item.second;
+            }
+            payForProduct(devCard);
+        }
+    }
     void generatePlayerBackgrounds()
     {
         sf::Vector2f playerBackgroundSize(90 * gSW, 13 * gSH);
@@ -449,7 +530,7 @@ public:
                     if (players[i].resources.at(Resource(j)) > 0)
                         indexes.push_back(j);
 
-                std::uniform_int_distribution<std::mt19937::result_type> dist(0, indexes.size());
+                std::uniform_int_distribution<std::mt19937::result_type> dist(0, indexes.size() - 1);
                 auto index = indexes[dist(rng)];
                 players[i].resources[Resource(index)] -= 1;
                 currentPlayer->resources[Resource(index)] += 1;
@@ -528,6 +609,8 @@ public:
                 button.setFillColor(colorPalette[2]);
                 break;
             case 3:
+                button.setTexture(&devCardTexture);
+                button.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
                 button.setFillColor(colorPalette[2]);
                 break;
             case 4:
@@ -604,7 +687,9 @@ public:
     }
     bool canBuy(Product type)
     {
-        if (type != card && currentPlayer->buildings[type] <= 0)
+        if (turnState == dice)
+            return false;
+        if (type != devCard && currentPlayer->buildings[type] <= 0)
             return false;
 
         auto cost = ProductCost[type];
@@ -632,7 +717,8 @@ public:
             for (auto pair : cost)
                 currentPlayer->resources[pair.first] -= pair.second;
         }
-        currentPlayer->buildings[chosenProduct] -= 1;
+        if (type != devCard)
+            currentPlayer->buildings[type] -= 1;
     }
     void nextGameState()
     {
@@ -1045,11 +1131,14 @@ public:
             if (isPressed(gameButtons[2], mousePos))
                 chooseProduct(road);
             if (isPressed(gameButtons[3], mousePos))
-                std::cout << 3 << "\n";
+                buyDevCard();
             if (isPressed(gameButtons[4], mousePos))
                 std::cout << 4 << "\n";
             if (isPressed(gameButtons[5], mousePos))
                 endTurn();
+            for (size_t i = 0; i < currentPlayer->cards.size(); i++)
+                if (isPressed(currentPlayer->cardRects[i], mousePos))
+                    playDevCard(currentPlayer->cards[i]);
         }
         if (robberActive)
             placeRobber(mousePos);

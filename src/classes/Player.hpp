@@ -9,7 +9,7 @@ enum Product
     settlement,
     city,
     road,
-    card
+    devCard
 };
 enum Resource
 {
@@ -18,6 +18,14 @@ enum Resource
     wool,
     grain,
     ore
+};
+enum CardType
+{
+    knight,
+    roadBuilding,
+    yearOfPlenty,
+    monopoly,
+    victoryPoint
 };
 
 int commonId = 0;
@@ -33,6 +41,8 @@ public:
         {brick, 0}, {lumber, 0}, {ore, 0}, {grain, 0}, {wool, 0}};
     std::map<Product, int> buildings{
         {settlement, 5}, {city, 4}, {road, 15}};
+    std::vector<CardType> cards;
+    std::vector<sf::RectangleShape> cardRects;
 
     Player()
     {

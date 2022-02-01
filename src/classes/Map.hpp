@@ -25,6 +25,8 @@ public:
     std::vector<std::vector<Building>> edgesMap;
     size_t eMapWidth, eMapHeight;
     sf::Vector2u robberPos;
+    std::map<CardType, int> cardDistribution{
+        {knight, 14}, {roadBuilding, 2}, {yearOfPlenty, 2}, {monopoly, 2}, {victoryPoint, 5}};
 
     void loadFromFile(std::string mapName)
     {
@@ -46,10 +48,10 @@ public:
             words = splitWords(line);
             this->width = std::stoull(words[0]);
             this->height = std::stoull(words[1]);
-            this->vMapWidth = 2*this->width + 1;
+            this->vMapWidth = 2 * this->width + 1;
             this->vMapHeight = this->height + 1;
-            this->eMapWidth = 2*this->width;
-            this->eMapHeight = 2*this->height + 1;
+            this->eMapWidth = 2 * this->width;
+            this->eMapHeight = 2 * this->height + 1;
             this->tileMap.resize(this->width, std::vector<Tile>(this->height));
 
             getline(file, line);
@@ -108,7 +110,6 @@ public:
             edgesMap.resize(eMapWidth);
             for (size_t i = 0; i < edgesMap.size(); i += 1)
                 edgesMap[i].resize(eMapHeight, Building(road));
-
         }
     }
     std::vector<std::string> splitWords(std::string line)
