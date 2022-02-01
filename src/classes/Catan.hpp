@@ -440,7 +440,8 @@ public:
             for (auto player : playersToBeRobbed)
                 if (players[i].id == player->id)
                     canBeRobbed = true;
-            if (!canBeRobbed) continue;
+            if (!canBeRobbed)
+                continue;
             if (playerBackgroundsRects[i].getGlobalBounds().contains(mousePos))
             {
                 std::vector<size_t> indexes;
@@ -449,7 +450,7 @@ public:
                         indexes.push_back(j);
 
                 std::uniform_int_distribution<std::mt19937::result_type> dist(0, indexes.size());
-                auto index = dist(rng);
+                auto index = indexes[dist(rng)];
                 players[i].resources[Resource(index)] -= 1;
                 currentPlayer->resources[Resource(index)] += 1;
                 robbingActive = false;
@@ -547,7 +548,7 @@ public:
                 button.setPosition(sf::Vector2f(-5 * gSW - buttonWidth + 1 * gSH, -1 * gSH - buttonWidth));
                 button.setTexture(&playTexture);
                 button.setTextureRect(sf::IntRect(0, 0, textureSize, textureSize));
-                button.setFillColor(colorPalette[4]);
+                button.setFillColor(sf::Color::White);
                 break;
             }
             gameButtons.push_back(button);
